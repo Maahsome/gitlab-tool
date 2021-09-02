@@ -333,9 +333,9 @@ func getProject(id int, user string) error {
 
 		var cmdLine string
 		if len(user) > 0 {
-			cmdLine = fmt.Sprintf("bash:gitlab-tool get pipeline -p %d -u %s", v.ID, user)
+			cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d -u %s>", v.ID, user)
 		} else {
-			cmdLine = fmt.Sprintf("bash:gitlab-tool get pipeline -p %d", v.ID)
+			cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d>", v.ID)
 		}
 		row := []string{
 			fmt.Sprintf("%d", v.ID),

@@ -11,7 +11,7 @@ Once you have Smart Selection and Actions setup, the output of this CLI tool con
 Smart Selection is in iTerm2 Preferences, Profiles, Advanced, Smart Selection.  Edit the Smart Selection list, click the + to add a new item.
 
 - Notes: CMD URL
-- Regex: bash:(.*)+\b
+- Regex: `<bash:(.*)>`
 
 Once you have that entered, click the `Edit Actions...` option
 
@@ -35,7 +35,7 @@ Here is an example of the configuration for a Dynamic Profile for iTerm2
         {
           "notes" : "CMD URL",
           "precision" : "very_low",
-          "regex" : "bash:(.*)$",
+          "regex" : "<bash:(.*)>",
           "actions" : [
             {
               "title" : "Run Command",

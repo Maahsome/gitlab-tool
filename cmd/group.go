@@ -92,9 +92,9 @@ func getGroup(user string) error {
 
 		var cmdLine string
 		if len(user) > 0 {
-			cmdLine = fmt.Sprintf("bash:gitlab-tool get project -g %d -u %s", v.ID, user)
+			cmdLine = fmt.Sprintf("<bash:gitlab-tool get project -g %d -u %s>", v.ID, user)
 		} else {
-			cmdLine = fmt.Sprintf("bash:gitlab-tool get project -g %d", v.ID)
+			cmdLine = fmt.Sprintf("<bash:gitlab-tool get project -g %d>", v.ID)
 		}
 		row := []string{
 			fmt.Sprintf("%d", v.ID),

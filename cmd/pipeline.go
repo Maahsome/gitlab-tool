@@ -88,7 +88,7 @@ func getPipeline(id int, user string) error {
 			fmt.Sprintf("%d", v.ID),
 			fmt.Sprintf("%d", v.ProjectID),
 			v.Status,
-			fmt.Sprintf("bash:gitlab-tool get jobs -p %d -l %d", v.ProjectID, v.ID),
+			fmt.Sprintf("<bash:gitlab-tool get jobs -p %d -l %d>", v.ProjectID, v.ID),
 		}
 		table.Append(row)
 	}
