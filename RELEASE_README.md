@@ -1,0 +1,23 @@
+# RELEASE Process
+
+- export RELEASE_VERSION={newSemVer}
+- where {newSemVer} is in the form of `v0.1.0`
+- Create a new branch for release.
+- `git checkout -b RELEASE_${RELEASE_VERSION}`
+- Generate the changelog for the version
+- SET your GitHub Personal Access Token
+- `export GH_PAT=YOUR_ACCESS_TOKEN_HERE`
+- `PREVIOUS_RELEASE_VER=$(curl -Ls https://api.github.com/repos/maahsome/gitlab-tool/releases/latest | jq -r '.tag_name'); echo ${PREVIOUS_RELEASE_VER}`
+- `changelog-pr generate -p . --since-tag "${PREVIOUS_RELEASE_VER}" --release-tag "${RELEASE_VERSION}" -v info --gh-token=${GH_PAT} --file changelog/${RELEASE_VERSION}.md`
+- Review changelog/releases/${RELEASE_VERSION}.md
+- `mdcat changelog/releases/${RELEASE_VERSION}.md`
+- Create and Merge PR
+- `git add -A; git commit -m "RELEASE of ${RELEASE_VERSION}"; git push origin RELEASE_${RELEASE_VERSION}`
+- Pull main
+- `git checkout main; git fetch; git pull`
+- Perform the release
+- `git tag ${RELEASE_VERSION}`
+- `git push origin ${RELEASE_VERSION}`
+- Check to see if Release GitHub Action kicks off
+- Check maahsome/gitlab-tool Releases Page, and maahsome/homebrew-tap/Formula/gitlab-tool.rb
+- `gh release list --repo maahsome/gitlab-tool --limit 5`

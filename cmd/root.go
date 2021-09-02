@@ -11,10 +11,14 @@ import (
 )
 
 var (
-	cfgFile  string
-	glHost   string
-	tokenVar string
-	glToken  string
+	cfgFile   string
+	glHost    string
+	tokenVar  string
+	glToken   string
+	semVer    string
+	gitCommit string
+	gitRef    string
+	buildDate string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -71,9 +75,9 @@ func initConfig() {
 		cobra.CheckErr(err)
 
 		// Search config in home directory with name ".gitlab-tool" (without extension).
-		viper.AddConfigPath(home)
+		viper.AddConfigPath(fmt.Sprintf("%s/.config/gitlab-tool", home))
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".gitlab-tool")
+		viper.SetConfigName("gitlab-tool")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
