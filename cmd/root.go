@@ -3,7 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
+	"github.com/maahsome/gitlab-tool/cmd/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -19,6 +22,10 @@ var (
 	gitCommit string
 	gitRef    string
 	buildDate string
+
+	semVerReg = regexp.MustCompile(`(v[0-9]+\.[0-9]+\.[0-9]+).*`)
+
+	c = &config.Config{}
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -32,9 +39,25 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		c.VersionDetail.SemVer = semVer
+		c.VersionDetail.BuildDate = buildDate
+		c.VersionDetail.GitCommit = gitCommit
+		c.VersionDetail.GitRef = gitRef
+		c.VersionJSON = fmt.Sprintf("{\"SemVer\": \"%s\", \"BuildDate\": \"%s\", \"GitCommit\": \"%s\", \"GitRef\": \"%s\"}", semVer, buildDate, gitCommit, gitRef)
 		glToken = os.Getenv(tokenVar)
 		if len(glToken) == 0 {
 			logrus.Fatal("GL_TOKEN is not set")
+		}
+
+		if c.OutputFormat != "" {
+			c.OutputFormat = strings.ToLower(c.OutputFormat)
+			switch c.OutputFormat {
+			case "json", "gron", "yaml", "text", "table", "raw":
+				break
+			default:
+				fmt.Println("Valid options for -o are [json|gron|text|table|yaml|raw]")
+				os.Exit(1)
+			}
 		}
 	},
 	// Uncomment the following line if your bare application
@@ -58,6 +81,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gitlab-tool.yaml)")
 	rootCmd.PersistentFlags().StringVar(&tokenVar, "token-variable", "GL_TOKEN", "Specify the ENV variable containing the gitlab PAT")
 	rootCmd.PersistentFlags().StringVar(&glHost, "gitlab-host", "gitlab.com", "Base gitlab host")
+	rootCmd.PersistentFlags().StringVarP(&c.OutputFormat, "output", "o", "", "Set an output format: json, text, yaml, gron")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -83,7 +107,7 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
+	// if err := viper.ReadInConfig(); err == nil {
+	// 	fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	// }
 }
