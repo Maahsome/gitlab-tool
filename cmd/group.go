@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-resty/resty/v2"
+	gl "github.com/maahsome/gitlab-tool/cmd/gitlab"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -57,20 +57,17 @@ to quickly create a Cobra application.`,
 }
 
 func getGroup(user string) error {
-	restClient := resty.New()
+	gitClient := gl.New(glHost, "", glToken)
 
-	uri := fmt.Sprintf("https://%s/api/v4/groups?per_page=100", glHost)
+	uri := "/groups?per_page=100&all_available=true"
 
-	resp, resperr := restClient.R().
-		SetHeader("PRIVATE-TOKEN", glToken).
-		Get(uri)
-
-	if resperr != nil {
-		logrus.WithError(resperr).Error("Oops")
+	gitdata, err := gitClient.Get(uri)
+	if err != nil {
+		logrus.WithError(err).Error("Bad fetch from gitlab")
 	}
 
 	var gr Group
-	marshErr := json.Unmarshal(resp.Body(), &gr)
+	marshErr := json.Unmarshal([]byte(gitdata), &gr)
 	if marshErr != nil {
 		logrus.Fatal("Cannot marshall Project", marshErr)
 	}
