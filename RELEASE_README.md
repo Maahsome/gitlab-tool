@@ -11,7 +11,7 @@
   - `PREVIOUS_RELEASE_VER=$(curl -Ls https://api.github.com/repos/maahsome/gitlab-tool/releases/latest | jq -r '.tag_name'); echo ${PREVIOUS_RELEASE_VER}`
   - `changelog-pr generate -p . --since-tag "${PREVIOUS_RELEASE_VER}" --release-tag "${RELEASE_VERSION}" -v info --gh-token=${GH_PAT} --file changelog/${RELEASE_VERSION}.md`
 - Review changelog/releases/${RELEASE_VERSION}.md
-  - `mdcat changelog/releases/${RELEASE_VERSION}.md`
+  - `mdcat changelog/${RELEASE_VERSION}.md`
 - Create and Merge PR
   - `git add -A; git commit -m "RELEASE of ${RELEASE_VERSION}"; git push origin RELEASE_${RELEASE_VERSION}`
   - `gh pr create --title "RELEASE ${RELEASE_VERSION}" --body "Release ${RELEASE_VERSION}" --base main`
