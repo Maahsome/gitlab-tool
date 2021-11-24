@@ -14,14 +14,16 @@ import (
 )
 
 var (
-	cfgFile   string
-	glHost    string
-	tokenVar  string
-	glToken   string
-	semVer    string
-	gitCommit string
-	gitRef    string
-	buildDate string
+	cfgFile      string
+	updateConfig bool
+	workDir      string
+	glHost       string
+	tokenVar     string
+	glToken      string
+	semVer       string
+	gitCommit    string
+	gitRef       string
+	buildDate    string
 
 	semVerReg = regexp.MustCompile(`(v[0-9]+\.[0-9]+\.[0-9]+).*`)
 
@@ -44,9 +46,37 @@ to quickly create a Cobra application.`,
 		c.VersionDetail.GitCommit = gitCommit
 		c.VersionDetail.GitRef = gitRef
 		c.VersionJSON = fmt.Sprintf("{\"SemVer\": \"%s\", \"BuildDate\": \"%s\", \"GitCommit\": \"%s\", \"GitRef\": \"%s\"}", semVer, buildDate, gitCommit, gitRef)
+		if updateConfig {
+			if len(glHost) > 0 {
+				viper.Set("gitlabhost", glHost)
+				verr := viper.WriteConfig()
+				if verr != nil {
+					logrus.WithError(verr).Info("Failed to write config")
+				} else {
+					logrus.Info("Successfully saved gitlab-host (%s) to config.yaml\n", glHost)
+				}
+			}
+			if len(tokenVar) > 0 {
+				viper.Set("tokenvar", tokenVar)
+				verr := viper.WriteConfig()
+				if verr != nil {
+					logrus.WithError(verr).Info("Failed to write config")
+				} else {
+					logrus.Info("Successfully saved token-var (%s) to config.yaml\n", tokenVar)
+				}
+			}
+		}
+		glHostFromConfig := viper.GetString("gitlabhost")
+		if len(glHostFromConfig) > 0 {
+			glHost = glHostFromConfig
+		}
+		tokenVarFromConfig := viper.GetString("tokenvar")
+		if len(tokenVarFromConfig) > 0 {
+			tokenVar = tokenVarFromConfig
+		}
 		glToken = os.Getenv(tokenVar)
 		if len(glToken) == 0 {
-			logrus.Fatal("GL_TOKEN is not set")
+			logrus.Fatal(fmt.Sprintf("%s ENV VAR does not have a value", tokenVar))
 		}
 
 		if c.OutputFormat != "" {
@@ -82,10 +112,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&tokenVar, "token-variable", "GL_TOKEN", "Specify the ENV variable containing the gitlab PAT")
 	rootCmd.PersistentFlags().StringVar(&glHost, "gitlab-host", "gitlab.com", "Base gitlab host")
 	rootCmd.PersistentFlags().StringVarP(&c.OutputFormat, "output", "o", "", "Set an output format: json, text, yaml, gron")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().BoolVar(&updateConfig, "update-config", false, "Update the config file with --gitlab-host and/or --token-variable")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -98,16 +125,45 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".gitlab-tool" (without extension).
-		viper.AddConfigPath(fmt.Sprintf("%s/.config/gitlab-tool", home))
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("gitlab-tool")
+		workDir = fmt.Sprintf("%s/.config/gitlab-tool", home)
+		if _, err := os.Stat(workDir); err != nil {
+			if os.IsNotExist(err) {
+				mkerr := os.MkdirAll(workDir, os.ModePerm)
+				if mkerr != nil {
+					logrus.Fatal("Error creating ~/.config/gitlab-tool directory", mkerr)
+				}
+			}
+		}
+		if stat, err := os.Stat(workDir); err == nil && stat.IsDir() {
+			configFile := fmt.Sprintf("%s/%s", workDir, "config.yaml")
+			createRestrictedConfigFile(configFile)
+			viper.SetConfigFile(configFile)
+		} else {
+			logrus.Info("The ~/.config/gitlab-tool path is a file and not a directory, please remove the 'gitlab-tool' file.")
+			os.Exit(1)
+		}
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	// if err := viper.ReadInConfig(); err == nil {
-	// 	fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	// }
+	if err := viper.ReadInConfig(); err != nil {
+		logrus.Warn("Failed to read viper config file.")
+	}
+}
+
+func createRestrictedConfigFile(fileName string) {
+	if _, err := os.Stat(fileName); err != nil {
+		if os.IsNotExist(err) {
+			file, ferr := os.Create(fileName)
+			if ferr != nil {
+				logrus.Info("Unable to create the configfile.")
+				os.Exit(1)
+			}
+			mode := int(0600)
+			if cherr := file.Chmod(os.FileMode(mode)); cherr != nil {
+				logrus.Info("Chmod for config file failed, please set the mode to 0600.")
+			}
+		}
+	}
 }
