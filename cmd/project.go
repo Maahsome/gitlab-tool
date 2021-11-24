@@ -291,13 +291,27 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		showOpts := 0
 		glUser, _ := cmd.Flags().GetString("user")
 		grID, _ := cmd.Flags().GetInt("group-id")
-		getProject(grID, glUser)
+		showPipeline, _ := cmd.Flags().GetBool("pipeline")
+		showMergeRequest, _ := cmd.Flags().GetBool("merge-request")
+		if !showPipeline && !showMergeRequest {
+			showOpts = 1
+		} else {
+			if showPipeline {
+				showOpts = showOpts + 1
+			}
+			if showMergeRequest {
+				showOpts = showOpts + 2
+			}
+		}
+
+		getProject(grID, glUser, showOpts)
 	},
 }
 
-func getProject(id int, user string) error {
+func getProject(id int, user string, opts int) error {
 	restClient := resty.New()
 
 	uri := fmt.Sprintf("https://%s/api/v4/groups/%d/projects", glHost, id)
@@ -317,7 +331,15 @@ func getProject(id int, user string) error {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"ID", "NAME", "PATH", "PIPELINES"})
+	switch opts {
+	case 1:
+		table.SetHeader([]string{"ID", "NAME", "PATH", "PIPELINES"})
+	case 2:
+		table.SetHeader([]string{"ID", "NAME", "PATH", "MR"})
+	case 3:
+		table.SetHeader([]string{"ID", "NAME", "PATH", "PIPELINE / MR"})
+	}
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -332,16 +354,37 @@ func getProject(id int, user string) error {
 	for _, v := range pr {
 
 		var cmdLine string
+		var mrLine string
 		if len(user) > 0 {
 			cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d -u %s>", v.ID, user)
 		} else {
 			cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d>", v.ID)
 		}
-		row := []string{
-			fmt.Sprintf("%d", v.ID),
-			v.Name,
-			v.Path,
-			cmdLine,
+		mrLine = fmt.Sprintf("<bash:gitlab-tool get mr -p %d>", v.ID)
+
+		row := []string{}
+		switch opts {
+		case 1:
+			row = []string{
+				fmt.Sprintf("%d", v.ID),
+				v.Name,
+				v.Path,
+				cmdLine,
+			}
+		case 2:
+			row = []string{
+				fmt.Sprintf("%d", v.ID),
+				v.Name,
+				v.Path,
+				mrLine,
+			}
+		case 3:
+			row = []string{
+				fmt.Sprintf("%d", v.ID),
+				v.Name,
+				v.Path,
+				fmt.Sprintf("%s\n%s", cmdLine, mrLine),
+			}
 		}
 		table.Append(row)
 	}
@@ -357,6 +400,8 @@ func init() {
 
 	projectCmd.Flags().StringP("user", "u", "", "Specify the gitlab User")
 	projectCmd.Flags().IntP("group-id", "g", 0, "Specify the GroupID")
+	projectCmd.Flags().BoolP("pipeline", "p", false, "Show PipeLine Links")
+	projectCmd.Flags().BoolP("merge-request", "m", false, "Show Merge Request Links")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
