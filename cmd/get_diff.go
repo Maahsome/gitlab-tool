@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	gl "github.com/maahsome/gitlab-tool/cmd/gitlab"
+	gl "github.com/maahsome/gitlab-go"
 	"github.com/maahsome/gitlab-tool/cmd/objects"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
