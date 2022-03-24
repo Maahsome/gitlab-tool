@@ -2,28 +2,36 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
 
+	git "github.com/go-git/go-git/v5"
+	gl "github.com/maahsome/gitlab-go"
 	"github.com/maahsome/gitlab-tool/cmd/config"
+	"github.com/maahsome/gitlab-tool/cmd/objects"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	giturls "github.com/whilp/git-urls"
 
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile      string
-	updateConfig bool
-	workDir      string
-	glHost       string
-	tokenVar     string
-	glToken      string
-	semVer       string
-	gitCommit    string
-	gitRef       string
-	buildDate    string
+	cfgFile       string
+	updateConfig  bool
+	workDir       string
+	glHost        string
+	tokenVar      string
+	glToken       string
+	semVer        string
+	gitCommit     string
+	gitRef        string
+	buildDate     string
+	cwdProjectID  int
+	cwdGitlabHost string
+	gitClient     gl.GitlabClient
 
 	semVerReg = regexp.MustCompile(`(v[0-9]+\.[0-9]+\.[0-9]+).*`)
 
@@ -34,50 +42,73 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "gitlab-tool",
 	Short: "A collection of REST API Calls",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long: `A cli tool to free you from the browser as much as possible.
+`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		c.VersionDetail.SemVer = semVer
 		c.VersionDetail.BuildDate = buildDate
 		c.VersionDetail.GitCommit = gitCommit
 		c.VersionDetail.GitRef = gitRef
 		c.VersionJSON = fmt.Sprintf("{\"SemVer\": \"%s\", \"BuildDate\": \"%s\", \"GitCommit\": \"%s\", \"GitRef\": \"%s\"}", semVer, buildDate, gitCommit, gitRef)
-		if updateConfig {
-			if len(glHost) > 0 {
-				viper.Set("gitlabhost", glHost)
-				verr := viper.WriteConfig()
-				if verr != nil {
-					logrus.WithError(verr).Info("Failed to write config")
-				} else {
-					logrus.Info("Successfully saved gitlab-host (%s) to config.yaml\n", glHost)
-				}
-			}
-			if len(tokenVar) > 0 {
-				viper.Set("tokenvar", tokenVar)
-				verr := viper.WriteConfig()
-				if verr != nil {
-					logrus.WithError(verr).Info("Failed to write config")
-				} else {
-					logrus.Info("Successfully saved token-var (%s) to config.yaml\n", tokenVar)
-				}
-			}
-		}
-		glHostFromConfig := viper.GetString("gitlabhost")
-		if len(glHostFromConfig) > 0 {
-			glHost = glHostFromConfig
-		}
-		tokenVarFromConfig := viper.GetString("tokenvar")
-		if len(tokenVarFromConfig) > 0 {
-			tokenVar = tokenVarFromConfig
-		}
-		glToken = os.Getenv(tokenVar)
-		if len(glToken) == 0 {
-			logrus.Fatal(fmt.Sprintf("%s ENV VAR does not have a value", tokenVar))
-		}
+		// if updateConfig {
+		// 	if len(glHost) > 0 {
+		// 		viper.Set("gitlabhost", glHost)
+		// 		verr := viper.WriteConfig()
+		// 		if verr != nil {
+		// 			logrus.WithError(verr).Info("Failed to write config")
+		// 		} else {
+		// 			logrus.Info("Successfully saved gitlab-host (%s) to config.yaml\n", glHost)
+		// 		}
+		// 	}
+		// 	if len(tokenVar) > 0 {
+		// 		viper.Set("tokenvar", tokenVar)
+		// 		verr := viper.WriteConfig()
+		// 		if verr != nil {
+		// 			logrus.WithError(verr).Info("Failed to write config")
+		// 		} else {
+		// 			logrus.Info("Successfully saved token-var (%s) to config.yaml\n", tokenVar)
+		// 		}
+		// 	}
+		// }
+
+		getCurrentWorkingDirGitInfo()
+
+		// glDefaultHost := ""
+		// glDefaultEnvVar := ""
+		// currentHost := viper.GetString("currentHost")
+		// var hostList objects.HostList
+		// err := viper.UnmarshalKey("hosts", &hostList)
+		// if err != nil {
+		// 	logrus.Fatal("Error unmarshalling...")
+		// }
+		// for _, v := range hostList {
+		// 	if strings.EqualFold(v.Host, cwdGitlabHost) {
+		// 		glHost = v.Host
+		// 		tokenVar = v.EnvVar
+		// 	}
+		// 	if v.Host == currentHost {
+		// 		glDefaultHost = v.Host
+		// 		glDefaultEnvVar = v.EnvVar
+		// 	}
+		// }
+		// if len(glHost) == 0 {
+		// 	glHost = glDefaultHost
+		// 	tokenVar = glDefaultEnvVar
+		// }
+		// // glHostFromConfig := viper.GetString("gitlabhost")
+		// // if len(glHostFromConfig) > 0 {
+		// // 	glHost = glHostFromConfig
+		// // }
+		// // tokenVarFromConfig := viper.GetString("tokenvar")
+		// // if len(tokenVarFromConfig) > 0 {
+		// // 	tokenVar = tokenVarFromConfig
+		// // }
+		// // glToken = os.Getenv(tokenVar)
+		// // if len(glToken) == 0 {
+		// // 	logrus.Fatal(fmt.Sprintf("%s ENV VAR does not have a value", tokenVar))
+		// // }
+
+		// gitClient = gl.New(glHost, "", glToken)
 
 		if c.OutputFormat != "" {
 			c.OutputFormat = strings.ToLower(c.OutputFormat)
@@ -90,13 +121,81 @@ to quickly create a Cobra application.`,
 			}
 		}
 	},
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+func getCurrentWorkingDirGitInfo() {
+
+	cwdProjectID = 0
+	cwdGitlabHost = ""
+
+	// Are we in a GIT working directory, if so, collect the host/projectid
+	workDir, werr := os.Getwd()
+	if werr != nil {
+		logrus.Fatal("Failed to get the current working directory?  That is odd.")
+	}
+
+	gitDir := fmt.Sprintf("%s/.git", workDir)
+	if stat, err := os.Stat(gitDir); err == nil && !stat.IsDir() {
+		realDir, rerr := os.ReadFile(gitDir)
+		if rerr != nil {
+			logrus.Fatal("Failed to read the worktree gitdir...")
+		}
+		workDir = strings.Split(strings.TrimSpace(strings.TrimPrefix(string(realDir[:]), "gitdir: ")), ".git")[0]
+	}
+
+	repo, rerr := git.PlainOpen(workDir)
+	if rerr != nil {
+		logrus.Fatal("Error retrieving git info")
+	}
+	repoConfig, rcerr := repo.Config()
+	if rcerr != nil {
+		logrus.Fatal("Error getting Config")
+	}
+	// fmt.Printf("%#v\n", repoConfig)
+	pURLs, _ := giturls.Parse(repoConfig.Remotes["origin"].URLs[0])
+	glSlug := strings.TrimPrefix(strings.TrimSuffix(pURLs.EscapedPath(), ".git"), "/")
+	glSlug = url.PathEscape(glSlug)
+
+	cwdGitlabHost = pURLs.Host
+
+	glDefaultHost := ""
+	glDefaultEnvVar := ""
+	currentHost := viper.GetString("currentHost")
+	var hostList objects.HostList
+	err := viper.UnmarshalKey("hosts", &hostList)
+	if err != nil {
+		logrus.Fatal("Error unmarshalling...")
+	}
+	for _, v := range hostList {
+		if strings.EqualFold(v.Host, cwdGitlabHost) {
+			glHost = v.Host
+			tokenVar = v.EnvVar
+		}
+		if v.Host == currentHost {
+			glDefaultHost = v.Host
+			glDefaultEnvVar = v.EnvVar
+		}
+	}
+	if len(glHost) == 0 {
+		glHost = glDefaultHost
+		tokenVar = glDefaultEnvVar
+	}
+	glToken = os.Getenv(tokenVar)
+	if len(glToken) == 0 {
+		logrus.Fatal(fmt.Sprintf("%s ENV VAR does not have a value", tokenVar))
+	}
+	// fmt.Printf("Host: %s, Token: %s\n", glHost, glToken)
+	gitClient = gl.New(glHost, "", glToken)
+
+	projectID, pierr := gitClient.GetProjectID(glSlug)
+	if pierr != nil {
+		logrus.Fatal("Could not get ProjectID from Slug", glSlug)
+	}
+
+	cwdProjectID = projectID
+
+}
+
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
@@ -104,15 +203,11 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gitlab-tool.yaml)")
 	rootCmd.PersistentFlags().StringVar(&tokenVar, "token-variable", "GL_TOKEN", "Specify the ENV variable containing the gitlab PAT")
 	rootCmd.PersistentFlags().StringVar(&glHost, "gitlab-host", "gitlab.com", "Base gitlab host")
 	rootCmd.PersistentFlags().StringVarP(&c.OutputFormat, "output", "o", "", "Set an output format: json, text, yaml, gron")
-	rootCmd.PersistentFlags().BoolVar(&updateConfig, "update-config", false, "Update the config file with --gitlab-host and/or --token-variable")
+	// rootCmd.PersistentFlags().BoolVar(&updateConfig, "update-config", false, "Update the config file with --gitlab-host and/or --token-variable")
 }
 
 // initConfig reads in config file and ENV variables if set.

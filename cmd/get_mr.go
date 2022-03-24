@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	gl "github.com/maahsome/gitlab-tool/cmd/gitlab"
 	"github.com/maahsome/gitlab-tool/cmd/objects"
 
 	"github.com/sirupsen/logrus"
@@ -21,6 +20,46 @@ var mrCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		prID, _ := cmd.Flags().GetInt("project-id")
 		showAll, _ := cmd.Flags().GetBool("all")
+
+		// workDir, werr := os.Getwd()
+		// if werr != nil {
+		// 	logrus.Fatal("Failed to get the current working directory?  That is odd.")
+		// }
+
+		// gitDir := fmt.Sprintf("%s/.git", workDir)
+		// if stat, err := os.Stat(gitDir); err == nil && !stat.IsDir() {
+		// 	realDir, rerr := os.ReadFile(gitDir)
+		// 	if rerr != nil {
+		// 		logrus.Fatal("Failed to read the worktree gitdir...")
+		// 	}
+		// 	workDir = strings.Split(strings.TrimSpace(strings.TrimPrefix(string(realDir[:]), "gitdir: ")), ".git")[0]
+		// }
+
+		// repo, rerr := git.PlainOpen(workDir)
+		// if rerr != nil {
+		// 	logrus.Fatal("Error retrieving git info")
+		// }
+		// repoConfig, rcerr := repo.Config()
+		// if rcerr != nil {
+		// 	logrus.Fatal("Error getting Config")
+		// }
+		// // fmt.Printf("%#v\n", repoConfig)
+		// pURLs, _ := giturls.Parse(repoConfig.Remotes["origin"].URLs[0])
+		// glSlug := strings.TrimPrefix(strings.TrimSuffix(pURLs.EscapedPath(), ".git"), "/")
+		// glSlug = url.PathEscape(glSlug)
+		// gitlabClient = gl.New(glHost, "", glToken)
+		// projectID, pierr := gitlabClient.GetProjectID(glSlug)
+		// if pierr != nil {
+		// 	logrus.Fatal("Could not get ProjectID from Slug", glSlug)
+		// }
+
+		if prID > 0 && cwdProjectID > 0 && prID != cwdProjectID {
+			logrus.Warn(fmt.Sprintf("The projectID provided via --project-id (-p) doesn't match %d", cwdProjectID))
+		}
+		// Default to --project-id (-p) passed in
+		if prID == 0 && cwdProjectID > 0 {
+			prID = cwdProjectID
+		}
 		err := getMergeRequest(prID, showAll)
 		if err != nil {
 			logrus.WithError(err).Error("Bad, bad programmer")
@@ -29,7 +68,7 @@ var mrCmd = &cobra.Command{
 }
 
 func getMergeRequest(id int, all bool) error {
-	gitClient := gl.New(glHost, "", glToken)
+	// gitClient := gl.New(glHost, "", glToken)
 
 	var uri string
 	if all {
@@ -77,14 +116,5 @@ func init() {
 
 	mrCmd.Flags().IntP("project-id", "p", 0, "Specify the ProjectID")
 	mrCmd.Flags().BoolP("all", "a", false, "Show ALL MRs, normally only show 'opened'")
-	// mrCmd.Flags().StringP("user", "u", "", "Specify the gitlab User")
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// mrCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// mrCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// mrCmd.MarkFlagRequired("project-id")
 }

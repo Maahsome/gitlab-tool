@@ -3,42 +3,51 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	git "github.com/go-git/go-git/v5"
-	gl "github.com/maahsome/gitlab-tool/cmd/gitlab"
+	gl "github.com/maahsome/gitlab-go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
+	"gopkg.in/yaml.v2"
 )
 
 // MergeRequest represents a GitLab merge request.
 //
 // GitLab API docs: https://docs.gitlab.com/ce/api/merge_requests.html
 type MergeRequest struct {
-	ID           int        `json:"id"`
-	IID          int        `json:"iid"`
-	TargetBranch string     `json:"target_branch"`
-	SourceBranch string     `json:"source_branch"`
-	ProjectID    int        `json:"project_id"`
-	Title        string     `json:"title"`
-	State        string     `json:"state"`
-	CreatedAt    *time.Time `json:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at"`
-	Description  string     `json:"description"`
-	MergeStatus  string     `json:"merge_status"`
-	MergeError   string     `json:"merge_error"`
-	MergedAt     *time.Time `json:"merged_at"`
-	ClosedAt     *time.Time `json:"closed_at"`
-	HasConflicts bool       `json:"has_conflicts"`
-	WebURL       string     `json:"web_url"`
+	ID               int        `json:"id"`
+	IID              int        `json:"iid"`
+	TargetBranch     string     `json:"target_branch"`
+	SourceBranch     string     `json:"source_branch"`
+	ProjectID        int        `json:"project_id"`
+	Title            string     `json:"title"`
+	State            string     `json:"state"`
+	CreatedAt        *time.Time `json:"created_at"`
+	UpdatedAt        *time.Time `json:"updated_at"`
+	Description      string     `json:"description"`
+	MergeStatus      string     `json:"merge_status"`
+	MergeError       string     `json:"merge_error"`
+	MergedAt         *time.Time `json:"merged_at"`
+	ClosedAt         *time.Time `json:"closed_at"`
+	HasConflicts     bool       `json:"has_conflicts"`
+	WebURL           string     `json:"web_url"`
+	Error            string     `json:"error"`
+	ErrorDescription string     `json:"error_description"`
+	Scope            string     `json:"scope"`
+}
+
+type WorktreeRef struct {
+	Gitdir string `yaml:"gitdir"`
 }
 
 var (
-	gitlabClient *gl.Gitlab
+	gitlabClient gl.GitlabClient
 )
 
 // createMrCmd represents the mr command
@@ -58,13 +67,24 @@ to quickly create a Cobra application.`,
 		// mrDescription, _ := cmd.Flags().GetString("description")
 		mrSource, _ := cmd.Flags().GetString("source")
 		mrTarget, _ := cmd.Flags().GetString("base")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		workDir, err := os.Getwd()
 		if err != nil {
 			logrus.Fatal("Failed to get the current working directory?  That is odd.")
 		}
 
-		workDir = "/Users/christopher.maahs/dev/falkor/tools/alterjira"
+		if stat, err := os.Stat(fmt.Sprintf("%s/.git", workDir)); err == nil && !stat.IsDir() {
+			if len(mrSource) == 0 {
+				logrus.Fatal(fmt.Sprintf("The working directory is a worktree: %s\nPlease use --source to provide the source branch name\n", workDir))
+			}
+			mainDir, mderr := ReadWorkTreeRef(fmt.Sprintf("%s/.git", workDir))
+			if mderr != nil {
+				logrus.Fatal("Error getting main git directory")
+			}
+			workDir = mainDir
+		}
+
 		repo, err := git.PlainOpen(workDir)
 		if err != nil {
 			logrus.Fatal("Error retrieving git info")
@@ -80,7 +100,7 @@ to quickly create a Cobra application.`,
 			}
 		}
 
-		fmt.Printf("Source Branch: %s\n", mrSource)
+		// fmt.Printf("Source Branch: %s\n", mrSource)
 		repoConfig, rcerr := repo.Config()
 		if rcerr != nil {
 			logrus.Fatal("Error getting Config")
@@ -95,11 +115,15 @@ to quickly create a Cobra application.`,
 		}
 
 		// mrURL, mrerr := CreateMR(projectID, mrTitle, mrDescription, mrSource, mrTarget)
-		mrURL, mrerr := CreateMR(projectID, mrTitle, mrSource, mrTarget)
-		if mrerr != nil {
-			logrus.WithError(mrerr).Fatal("Failed to create MR")
+		if dryRun {
+			fmt.Printf("Create an MR on:\n\tProjectID: %d\n\tTitle: %s\n\tSource Branch: %s\n\tTarget Branch: %s\n", projectID, mrTitle, mrSource, mrTarget)
+		} else {
+			mrURL, mrerr := CreateMR(projectID, mrTitle, mrSource, mrTarget)
+			if mrerr != nil {
+				logrus.WithError(mrerr).Fatal("Failed to create MR")
+			}
+			fmt.Printf("Merge Request: %s\n", mrURL)
 		}
-		fmt.Printf("Merge Request: %s\n", mrURL)
 	},
 }
 
@@ -116,6 +140,9 @@ func CreateMR(projectID int, title string, src string, dst string) (string, erro
 		logrus.Fatal("Cannot marshall MR", marshErr)
 	}
 
+	if len(mr.Error) > 0 {
+		logrus.Fatal(fmt.Sprintf("There was an error with the API call.\n\tError: %s\n\tDescription: %s\n\tScope: %s", mr.Error, mr.ErrorDescription, mr.Scope))
+	}
 	return mr.WebURL, nil
 
 }
@@ -127,6 +154,22 @@ func init() {
 	// createMrCmd.Flags().StringP("description", "d", "", "Specify the MR description")
 	createMrCmd.Flags().StringP("source", "s", "", "Specify the MR source branch")
 	createMrCmd.Flags().StringP("base", "b", "", "Specify the MR base/target branch")
+	createMrCmd.Flags().BoolP("dry-run", "d", false, "No actions performed, just output what will happen")
 	createMrCmd.MarkFlagRequired("title")
 	createMrCmd.MarkFlagRequired("base")
+}
+
+func ReadWorkTreeRef(filePath string) (string, error) {
+	bytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	gwt := WorktreeRef{}
+	if err := yaml.Unmarshal(bytes, &gwt); err != nil {
+		return "", err
+	}
+
+	mainTree := strings.Split(gwt.Gitdir, ".git")
+	return mainTree[0], nil
 }
