@@ -120,7 +120,7 @@ func (mr *MergeRequest) ToTEXT(noHeaders bool) string {
 	// ************************** TableWriter ******************************
 	table := tablewriter.NewWriter(buf)
 	if !noHeaders {
-		table.SetHeader([]string{"IID", "TITLE", "STATE", "DIFF"})
+		table.SetHeader([]string{"IID", "TITLE", "STATE", "AUTHOR", "CREATED", "DIFF"})
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	}
 
@@ -141,6 +141,8 @@ func (mr *MergeRequest) ToTEXT(noHeaders bool) string {
 			fmt.Sprintf("%d", v.Iid),
 			v.Title,
 			v.State,
+			v.Author.Name,
+			v.CreatedAt.Format("2006-01-02 15:04:05"),
 			fmt.Sprintf("<bash:gitlab-tool get diff -p %d -m %d>", v.ProjectID, v.Iid),
 		}
 		table.Append(row)
