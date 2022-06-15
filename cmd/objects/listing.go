@@ -3,6 +3,7 @@ package objects
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/maahsome/gron"
@@ -15,7 +16,8 @@ type GitListing []GitListItem
 
 type GitListItem struct {
 	StatBlock string `json:"stat_block"`
-	Path      string `json:"Path"`
+	Path      string `json:"path"`
+	ID        int    `json:"id"`
 }
 
 // ToJSON - Write the output as JSON
@@ -53,13 +55,17 @@ func (gl *GitListing) ToYAML() string {
 	return string(glYAML[:])
 }
 
-func (gl *GitListing) ToTEXT(noHeaders bool) string {
+func (gl *GitListing) ToTEXT(noHeaders bool, showid bool) string {
 	buf, row := new(bytes.Buffer), make([]string, 0)
 
 	// ************************** TableWriter ******************************
 	table := tablewriter.NewWriter(buf)
 	if !noHeaders {
-		table.SetHeader([]string{"STAT", "PATH"})
+		if showid {
+			table.SetHeader([]string{"STAT", "PATH", "ID"})
+		} else {
+			table.SetHeader([]string{"STAT", "PATH"})
+		}
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	}
 
@@ -76,9 +82,17 @@ func (gl *GitListing) ToTEXT(noHeaders bool) string {
 
 	// for i=0; i<=len(mr); i++ {
 	for _, v := range *gl {
-		row = []string{
-			v.StatBlock,
-			v.Path,
+		if showid {
+			row = []string{
+				v.StatBlock,
+				v.Path,
+				fmt.Sprintf("%d", v.ID),
+			}
+		} else {
+			row = []string{
+				v.StatBlock,
+				v.Path,
+			}
 		}
 		table.Append(row)
 	}
