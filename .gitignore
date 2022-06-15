@@ -14,3 +14,7 @@ gitlab-tool
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Need to disregard this, as it is an artifact produced by pipeline
+vRELEASE.md
+
