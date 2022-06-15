@@ -182,8 +182,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gitlab-tool.yaml)")
-	rootCmd.PersistentFlags().StringVar(&tokenVar, "token-variable", "GL_TOKEN", "Specify the ENV variable containing the gitlab PAT")
-	rootCmd.PersistentFlags().StringVar(&glHost, "gitlab-host", "gitlab.com", "Base gitlab host")
+	// rootCmd.PersistentFlags().StringVar(&tokenVar, "token-variable", "GL_TOKEN", "Specify the ENV variable containing the gitlab PAT")
+	// rootCmd.PersistentFlags().StringVar(&glHost, "gitlab-host", "gitlab.com", "Base gitlab host")
 	rootCmd.PersistentFlags().StringVarP(&c.OutputFormat, "output", "o", "", "Set an output format: json, text, yaml, gron")
 	// rootCmd.PersistentFlags().BoolVar(&updateConfig, "update-config", false, "Update the config file with --gitlab-host and/or --token-variable")
 }
