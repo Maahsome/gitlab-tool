@@ -11,23 +11,74 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       -
         name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15
+          go-version: 1.17
       -
         name: Set RELEASE_TAG env
-        run: echo RELEASE_TAG=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev ) >> ${GITHUB_ENV}
+        run: |
+          echo RELEASE_TAG=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev ) >> ${GITHUB_ENV}
+          RELEASE_TAG=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev)
+          echo "COPY ./changelog/v0.0.0-NEXT.md to ./vRELEASE.md"
+          cp ./changelog/v0.0.0-NEXT.md ./vRELEASE.md
+          sed -i "s/^## v0.0.0-NEXT$/## ${RELEASE_TAG}/" ./vRELEASE.md
+      -
+          name: CAT TAG File
+          run: |
+            cat ./vRELEASE.md
+      -
+        name: 'Upload Artifact'
+        uses: actions/upload-artifact@v2
+        with:
+          name: vRELEASE
+          path: "vRELEASE.md"
+          retention-days: 1
       -
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
-          args: release --rm-dist --release-notes=changelog/${{ env.RELEASE_TAG }}.md
+          args: release --rm-dist --release-notes=vRELEASE.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MAAHSOME_PAT: ${{ secrets.MAAHSOME_PAT }}
+  changelog:
+    runs-on: ubuntu-latest
+    needs: [goreleaser]
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          fetch-depth: 0
+      -
+        name: Get Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: vRELEASE
+      -
+        name: Place ChangeLog
+        run: |
+          echo RELEASE_TAG=$(cat ./vRELEASE.md | head -n 1 | awk '{print $2}') >> ${GITHUB_ENV}
+          RELEASE_TAG=$(cat ./vRELEASE.md | head -n 1 | awk '{print $2}')
+          echo "COPY ./vRELEASE.md to ./changelog/${RELEASE_TAG}.md"
+          cp ./vRELEASE.md ./changelog/${RELEASE_TAG}.md
+      -
+        name: Echo Relese TAG
+        run: |
+          echo $RELEASE_TAG
+      -
+        name: Commit ChangeLog
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: "changelog/${{ env.RELEASE_TAG }}.md"
+          remove: "changelog/v0.0.0-NEXT.md"
+          committer_name: Christopher Maahs
+          committer_email: cmaahs@gmail.com
+          message: "Update Release ${{ env.RELEASE_TAG }}.md ChangeLog"
