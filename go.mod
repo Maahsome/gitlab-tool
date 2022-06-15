@@ -2,13 +2,13 @@ module github.com/maahsome/gitlab-tool
 
 go 1.17
 
-// replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/Worktrees/GG-1/gitlab-go/get-subprojects
+// replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/Worktrees/GG-2/gitlab-go/add-project-member
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/maahsome/gitlab-go v0.1.7
+	github.com/maahsome/gitlab-go v0.1.8
 	github.com/maahsome/gron v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/sirupsen/logrus v1.8.1
