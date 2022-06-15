@@ -30,6 +30,16 @@ var listConfigCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List host configurations",
 	Long: `EXAMPLE:
+Show configured directories and their associated settings
+
+> gl config list
+
+DIRECTORY                                    	ENVVAR   	GROUP           	HOST
+/Users/christopher.maahs/dev/futurama        	GLA_TOKEN	futurama        	git.alteryx.com
+/Users/christopher.maahs/dev/falkor          	GLA_TOKEN	falkor          	git.alteryx.com
+/Users/christopher.maahs/src/alteryx_falkor  	GL_TOKEN 	alteryx_falkor  	gitlab.com
+/Users/christopher.maahs/src/alteryx_futurama	GL_TOKEN 	alteryx_futurama	gitlab.com
+
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		var configList objects.ConfigList
