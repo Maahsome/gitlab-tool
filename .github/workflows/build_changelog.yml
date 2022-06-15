@@ -1,0 +1,44 @@
+name: Build-ChangeLog
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  changelog-create:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      -
+        name: Set PREVIOUS TAG
+        run: echo PREVIOUS_TAG=$(curl -Ls https://api.github.com/repos/maahsome/gitlab-tool/releases/latest | jq -r '.tag_name') >> ${GITHUB_ENV}
+      -
+        name: Run ChangeLog-PR
+        uses: Maahsome/changelog-pr-action@v1.0
+        with:
+          previous_tag: $PREVIOUS_TAG
+          token: ${{ secrets.GITHUB_TOKEN }}
+          verbose_level: trace
+          changelog_dir: changelog
+      -
+        name: Get Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: v0.0.0-NEXT
+      -
+        name: CAT File
+        run: |
+          cat changelog/v0.0.0-NEXT.md
+      -
+        name: Commit ChangeLog
+        uses: EndBug/add-and-commit@v7
+        with:
+          add: 'changelog/v0.0.0-NEXT.md'
+          committer_name: Christopher Maahs
+          committer_email: cmaahs@gmail.com
+          message: 'Update v0.0.0-NEXT.md running changelog'
