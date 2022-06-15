@@ -16,42 +16,26 @@ var mrCmd = &cobra.Command{
 	Use:   "mr",
 	Short: "Get a list of MR for a ProjectID",
 	Long: `EXAMPLE:
-> gitlab-tool get mr -p 2342355`,
+You are in a project directory AND have a configuration for the directory you are in, this will
+return the MRs for your current project.
+
+> gitlab-tool get mr
+
+IID	TITLE                                  	STATE 	AUTHOR      	CREATED            	DIFF
+2  	Configure WhiteSource for GitLab Server	opened	@whitesource	2022-03-03 06:37:31	<bash:gitlab-tool get diff -p 6122 -m 2>
+
+EXAMPLE:
+
+You want to get an MR list for a specific project, using the ProjectID, from another gitlab project directory
+
+> gitlab-tool get mr -p 6122
+WARN[0001] The projectID provided via --project-id (-p) doesn't match 6123
+IID	TITLE                                  	STATE 	AUTHOR      	CREATED            	DIFF
+2  	Configure WhiteSource for GitLab Server	opened	@whitesource	2022-03-03 06:37:31	<bash:gitlab-tool get diff -p 6122 -m 2>
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		prID, _ := cmd.Flags().GetInt("project-id")
 		showAll, _ := cmd.Flags().GetBool("all")
-
-		// workDir, werr := os.Getwd()
-		// if werr != nil {
-		// 	logrus.Fatal("Failed to get the current working directory?  That is odd.")
-		// }
-
-		// gitDir := fmt.Sprintf("%s/.git", workDir)
-		// if stat, err := os.Stat(gitDir); err == nil && !stat.IsDir() {
-		// 	realDir, rerr := os.ReadFile(gitDir)
-		// 	if rerr != nil {
-		// 		logrus.Fatal("Failed to read the worktree gitdir...")
-		// 	}
-		// 	workDir = strings.Split(strings.TrimSpace(strings.TrimPrefix(string(realDir[:]), "gitdir: ")), ".git")[0]
-		// }
-
-		// repo, rerr := git.PlainOpen(workDir)
-		// if rerr != nil {
-		// 	logrus.Fatal("Error retrieving git info")
-		// }
-		// repoConfig, rcerr := repo.Config()
-		// if rcerr != nil {
-		// 	logrus.Fatal("Error getting Config")
-		// }
-		// // fmt.Printf("%#v\n", repoConfig)
-		// pURLs, _ := giturls.Parse(repoConfig.Remotes["origin"].URLs[0])
-		// glSlug := strings.TrimPrefix(strings.TrimSuffix(pURLs.EscapedPath(), ".git"), "/")
-		// glSlug = url.PathEscape(glSlug)
-		// gitlabClient = gl.New(glHost, "", glToken)
-		// projectID, pierr := gitlabClient.GetProjectID(glSlug)
-		// if pierr != nil {
-		// 	logrus.Fatal("Could not get ProjectID from Slug", glSlug)
-		// }
 
 		if prID > 0 && cwdProjectID > 0 && prID != cwdProjectID {
 			logrus.Warn(fmt.Sprintf("The projectID provided via --project-id (-p) doesn't match %d", cwdProjectID))
@@ -68,7 +52,6 @@ var mrCmd = &cobra.Command{
 }
 
 func getMergeRequest(id int, all bool) error {
-	// gitClient := gl.New(glHost, "", glToken)
 
 	var uri string
 	if all {
@@ -116,5 +99,4 @@ func init() {
 
 	mrCmd.Flags().IntP("project-id", "p", 0, "Specify the ProjectID")
 	mrCmd.Flags().BoolP("all", "a", false, "Show ALL MRs, normally only show 'opened'")
-	// mrCmd.MarkFlagRequired("project-id")
 }
