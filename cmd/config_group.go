@@ -14,8 +14,12 @@ var configGroupCmd = &cobra.Command{
 	Use:   "group",
 	Short: "Configure a group to a local directory",
 	Long: `EXAMPLE:
-> gitlab-tool config group --gitlab-host git.alteryx.com --group futurama --directory ~/dev/futurama
 
+> gitlab-tool config group --gitlab-host git.alteryx.com --group futurama --directory ~/dev/futurama --env-var GITLAB_TOKEN_ALTERYX
+
+EXAMPLE:
+
+> gitlab-tool config group --gitlab-host gitlab.com --group alteryx_futurama --directory ~/src/alteryx_futurama --env-var GITLAB_TOKEN_PUBLIC
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		gitlabHost, _ := cmd.Flags().GetString("gitlab-host")
