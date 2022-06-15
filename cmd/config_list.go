@@ -32,32 +32,32 @@ var listConfigCmd = &cobra.Command{
 	Long: `EXAMPLE:
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		var hostList objects.HostList
-		err := viper.UnmarshalKey("hosts", &hostList)
+		var configList objects.ConfigList
+		err := viper.UnmarshalKey("configs", &configList)
 		if err != nil {
 			logrus.Fatal("Error unmarshalling...")
 		}
 
-		fmt.Println(hlDataToString(hostList, fmt.Sprintf("%#v", hostList)))
+		fmt.Println(clDataToString(configList, fmt.Sprintf("%#v", configList)))
 
 	},
 }
 
-func hlDataToString(mrData objects.HostList, raw string) string {
+func clDataToString(clData objects.ConfigList, raw string) string {
 
 	switch strings.ToLower(c.OutputFormat) {
 	case "raw":
 		return raw
 	case "json":
-		return mrData.ToJSON()
+		return clData.ToJSON()
 	case "gron":
-		return mrData.ToGRON()
+		return clData.ToGRON()
 	case "yaml":
-		return mrData.ToYAML()
+		return clData.ToYAML()
 	case "text", "table":
-		return mrData.ToTEXT(c.NoHeaders)
+		return clData.ToTEXT(c.NoHeaders)
 	default:
-		return mrData.ToTEXT(c.NoHeaders)
+		return clData.ToTEXT(c.NoHeaders)
 	}
 }
 

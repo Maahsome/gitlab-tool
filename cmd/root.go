@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -19,19 +20,21 @@ import (
 )
 
 var (
-	cfgFile       string
-	updateConfig  bool
-	workDir       string
-	glHost        string
-	tokenVar      string
-	glToken       string
-	semVer        string
-	gitCommit     string
-	gitRef        string
-	buildDate     string
-	cwdProjectID  int
-	cwdGitlabHost string
-	gitClient     gl.GitlabClient
+	cfgFile        string
+	inProject      bool
+	glHost         string
+	tokenVar       string
+	glToken        string
+	semVer         string
+	gitCommit      string
+	gitRef         string
+	buildDate      string
+	cwdProjectID   int
+	cwdGroupID     int
+	cwdGitlabHost  string
+	configDir      string
+	currentWorkDir string
+	gitClient      gl.GitlabClient
 
 	semVerReg = regexp.MustCompile(`(v[0-9]+\.[0-9]+\.[0-9]+).*`)
 
@@ -50,65 +53,11 @@ var rootCmd = &cobra.Command{
 		c.VersionDetail.GitCommit = gitCommit
 		c.VersionDetail.GitRef = gitRef
 		c.VersionJSON = fmt.Sprintf("{\"SemVer\": \"%s\", \"BuildDate\": \"%s\", \"GitCommit\": \"%s\", \"GitRef\": \"%s\"}", semVer, buildDate, gitCommit, gitRef)
-		// if updateConfig {
-		// 	if len(glHost) > 0 {
-		// 		viper.Set("gitlabhost", glHost)
-		// 		verr := viper.WriteConfig()
-		// 		if verr != nil {
-		// 			logrus.WithError(verr).Info("Failed to write config")
-		// 		} else {
-		// 			logrus.Info("Successfully saved gitlab-host (%s) to config.yaml\n", glHost)
-		// 		}
-		// 	}
-		// 	if len(tokenVar) > 0 {
-		// 		viper.Set("tokenvar", tokenVar)
-		// 		verr := viper.WriteConfig()
-		// 		if verr != nil {
-		// 			logrus.WithError(verr).Info("Failed to write config")
-		// 		} else {
-		// 			logrus.Info("Successfully saved token-var (%s) to config.yaml\n", tokenVar)
-		// 		}
-		// 	}
-		// }
 
-		getCurrentWorkingDirGitInfo()
-
-		// glDefaultHost := ""
-		// glDefaultEnvVar := ""
-		// currentHost := viper.GetString("currentHost")
-		// var hostList objects.HostList
-		// err := viper.UnmarshalKey("hosts", &hostList)
-		// if err != nil {
-		// 	logrus.Fatal("Error unmarshalling...")
-		// }
-		// for _, v := range hostList {
-		// 	if strings.EqualFold(v.Host, cwdGitlabHost) {
-		// 		glHost = v.Host
-		// 		tokenVar = v.EnvVar
-		// 	}
-		// 	if v.Host == currentHost {
-		// 		glDefaultHost = v.Host
-		// 		glDefaultEnvVar = v.EnvVar
-		// 	}
-		// }
-		// if len(glHost) == 0 {
-		// 	glHost = glDefaultHost
-		// 	tokenVar = glDefaultEnvVar
-		// }
-		// // glHostFromConfig := viper.GetString("gitlabhost")
-		// // if len(glHostFromConfig) > 0 {
-		// // 	glHost = glHostFromConfig
-		// // }
-		// // tokenVarFromConfig := viper.GetString("tokenvar")
-		// // if len(tokenVarFromConfig) > 0 {
-		// // 	tokenVar = tokenVarFromConfig
-		// // }
-		// // glToken = os.Getenv(tokenVar)
-		// // if len(glToken) == 0 {
-		// // 	logrus.Fatal(fmt.Sprintf("%s ENV VAR does not have a value", tokenVar))
-		// // }
-
-		// gitClient = gl.New(glHost, "", glToken)
+		inProject = true
+		if os.Args[1] != "version" && os.Args[1] != "config" {
+			getCurrentWorkingDirGitInfo()
+		}
 
 		if c.OutputFormat != "" {
 			c.OutputFormat = strings.ToLower(c.OutputFormat)
@@ -126,6 +75,7 @@ var rootCmd = &cobra.Command{
 func getCurrentWorkingDirGitInfo() {
 
 	cwdProjectID = 0
+	cwdGroupID = 0
 	cwdGitlabHost = ""
 
 	// Are we in a GIT working directory, if so, collect the host/projectid
@@ -133,67 +83,95 @@ func getCurrentWorkingDirGitInfo() {
 	if werr != nil {
 		logrus.Fatal("Failed to get the current working directory?  That is odd.")
 	}
+	currentWorkDir = workDir
 
+	logrus.Debug(fmt.Sprintf("workDir: %s", workDir))
 	gitDir := fmt.Sprintf("%s/.git", workDir)
-	if stat, err := os.Stat(gitDir); err == nil && !stat.IsDir() {
-		realDir, rerr := os.ReadFile(gitDir)
-		if rerr != nil {
-			logrus.Fatal("Failed to read the worktree gitdir...")
+	if stat, err := os.Stat(gitDir); err == nil {
+		if !stat.IsDir() {
+			realDir, rerr := os.ReadFile(gitDir)
+			if rerr != nil {
+				logrus.Fatal("Failed to read the worktree gitdir...")
+			}
+			workDir = strings.TrimSuffix(strings.Split(strings.TrimSpace(strings.TrimPrefix(string(realDir[:]), "gitdir: ")), ".git")[0], "/")
 		}
-		workDir = strings.Split(strings.TrimSpace(strings.TrimPrefix(string(realDir[:]), "gitdir: ")), ".git")[0]
+	} else {
+		inProject = false
 	}
 
-	repo, rerr := git.PlainOpen(workDir)
-	if rerr != nil {
-		logrus.Fatal("Error retrieving git info")
-	}
-	repoConfig, rcerr := repo.Config()
-	if rcerr != nil {
-		logrus.Fatal("Error getting Config")
-	}
-	// fmt.Printf("%#v\n", repoConfig)
-	pURLs, _ := giturls.Parse(repoConfig.Remotes["origin"].URLs[0])
-	glSlug := strings.TrimPrefix(strings.TrimSuffix(pURLs.EscapedPath(), ".git"), "/")
-	glSlug = url.PathEscape(glSlug)
-
-	cwdGitlabHost = pURLs.Host
-
-	glDefaultHost := ""
-	glDefaultEnvVar := ""
-	currentHost := viper.GetString("currentHost")
-	var hostList objects.HostList
-	err := viper.UnmarshalKey("hosts", &hostList)
+	glGroup := ""
+	configDir = ""
+	var configList objects.ConfigList
+	err := viper.UnmarshalKey("configs", &configList)
 	if err != nil {
 		logrus.Fatal("Error unmarshalling...")
 	}
-	for _, v := range hostList {
-		if strings.EqualFold(v.Host, cwdGitlabHost) {
+	missingConfig := true
+	for _, v := range configList {
+		if strings.HasPrefix(workDir, v.Directory) {
+			configDir = v.Directory
 			glHost = v.Host
 			tokenVar = v.EnvVar
-		}
-		if v.Host == currentHost {
-			glDefaultHost = v.Host
-			glDefaultEnvVar = v.EnvVar
+			glGroup = v.Group
+			missingConfig = false
+			break
 		}
 	}
+	if missingConfig {
+		logrus.Fatal(fmt.Sprintf("You are not in a configured directory: %s", workDir))
+	}
 	if len(glHost) == 0 {
-		glHost = glDefaultHost
-		tokenVar = glDefaultEnvVar
+		logrus.Fatal("Unable to fetch the gitlab host from the configured directory: %s, please check the config.yaml", workDir)
 	}
 	glToken = os.Getenv(tokenVar)
 	if len(glToken) == 0 {
 		logrus.Fatal(fmt.Sprintf("%s ENV VAR does not have a value", tokenVar))
 	}
-	// fmt.Printf("Host: %s, Token: %s\n", glHost, glToken)
+
+	cwdGitlabHost = glHost
 	gitClient = gl.New(glHost, "", glToken)
 
-	projectID, pierr := gitClient.GetProjectID(glSlug)
-	if pierr != nil {
-		logrus.Fatal("Could not get ProjectID from Slug", glSlug)
+	if inProject {
+		repo, rerr := git.PlainOpen(workDir)
+		if rerr != nil {
+			logrus.Fatal("Error retrieving git info")
+		}
+		repoConfig, rcerr := repo.Config()
+		if rcerr != nil {
+			logrus.Fatal("Error getting Config")
+		}
+		// fmt.Printf("%#v\n", repoConfig)
+		pURLs, _ := giturls.Parse(repoConfig.Remotes["origin"].URLs[0])
+		glSlug := strings.TrimPrefix(strings.TrimSuffix(pURLs.EscapedPath(), ".git"), "/")
+		glSlug = url.PathEscape(glSlug)
+
+		cwdGitlabHost = pURLs.Host
+
+		projectID, pierr := gitClient.GetProjectID(glSlug)
+		if pierr != nil {
+			logrus.Fatal("Could not get ProjectID from Slug", glSlug)
+		}
+
+		cwdProjectID = projectID
 	}
 
-	cwdProjectID = projectID
+	grSlug := url.PathEscape(glGroup)
+	subSlug := strings.TrimPrefix(workDir, configDir)
+	if len(subSlug) > 0 {
+		if inProject {
+			grSub := filepath.Dir(subSlug)
+			grSlug = url.PathEscape(fmt.Sprintf("%s%s", glGroup, grSub))
+		} else {
+			grSlug = url.PathEscape(fmt.Sprintf("%s%s", glGroup, subSlug))
+		}
+	}
+	logrus.Debug(fmt.Sprintf("grSlug: %s", grSlug))
+	groupID, gierr := gitClient.GetGroupID(grSlug)
+	if gierr != nil {
+		logrus.Fatal("Could not get GroupID from Slug", grSlug)
+	}
 
+	cwdGroupID = groupID
 }
 
 func Execute() {
@@ -220,7 +198,7 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		workDir = fmt.Sprintf("%s/.config/gitlab-tool", home)
+		workDir := fmt.Sprintf("%s/.config/gitlab-tool", home)
 		if _, err := os.Stat(workDir); err != nil {
 			if os.IsNotExist(err) {
 				mkerr := os.MkdirAll(workDir, os.ModePerm)
