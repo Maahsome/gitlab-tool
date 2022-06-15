@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/maahsome/gitlab-tool/cmd/objects"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -17,17 +14,17 @@ var getConfigCmd = &cobra.Command{
 	Long: `EXAMPLE:
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		configName, _ := cmd.Flags().GetString("name")
-		var hostList objects.HostList
-		err := viper.UnmarshalKey("hosts", &hostList)
+		// configName, _ := cmd.Flags().GetString("name")
+		var configList objects.ConfigList
+		err := viper.UnmarshalKey("configs", &configList)
 		if err != nil {
 			logrus.Fatal("Error unmarshalling...")
 		}
-		for _, v := range hostList {
-			if strings.EqualFold(v.Name, configName) {
-				fmt.Printf("%s\t%s\t%s\n", v.Name, v.Host, v.EnvVar)
-			}
-		}
+		// for _, v := range configList {
+		// 	if strings.EqualFold(v.Name, configName) {
+		// 		fmt.Printf("%s\t%s\t%s\n", v.Name, v.Host, v.EnvVar)
+		// 	}
+		// }
 
 	},
 }
