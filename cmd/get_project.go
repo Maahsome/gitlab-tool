@@ -279,8 +279,8 @@ type Project []struct {
 // 	} `json:"forked_from_project,omitempty"`
 // }
 
-// projectCmd represents the projects command
-var projectCmd = &cobra.Command{
+// getProjectCmd represents the projects command
+var getProjectCmd = &cobra.Command{
 	Use:     "project",
 	Aliases: []string{"projects"},
 	Short:   "A brief description of your command",
@@ -396,19 +396,10 @@ func getProject(id int, user string, opts int) error {
 }
 
 func init() {
-	getCmd.AddCommand(projectCmd)
+	getCmd.AddCommand(getProjectCmd)
 
-	projectCmd.Flags().StringP("user", "u", "", "Specify the gitlab User")
-	projectCmd.Flags().IntP("group-id", "g", 0, "Specify the GroupID")
-	projectCmd.Flags().BoolP("pipeline", "p", false, "Show PipeLine Links")
-	projectCmd.Flags().BoolP("merge-request", "m", false, "Show Merge Request Links")
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// projectsCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// projectsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	getProjectCmd.Flags().StringP("user", "u", "", "Specify the gitlab User")
+	getProjectCmd.Flags().IntP("group-id", "g", 0, "Specify the GroupID")
+	getProjectCmd.Flags().BoolP("pipeline", "p", false, "Show PipeLine Links")
+	getProjectCmd.Flags().BoolP("merge-request", "m", false, "Show Merge Request Links")
 }
