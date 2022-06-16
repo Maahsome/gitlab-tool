@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"strings"
 
-	gl "github.com/maahsome/gitlab-go"
 	"github.com/maahsome/gitlab-tool/cmd/objects"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -18,16 +17,36 @@ var diffCmd = &cobra.Command{
 	Use:   "diff",
 	Short: "Retrieve a diff for an MR",
 	Long: `EXAMPLE:
-> gitlab-tool get diff -p 28247395 -m 291.`,
+Get a diff for the current directory project
+
+> gitlab-tool get diff -m 1
+
+* displays a diff format *
+
+EXAMPLE:
+Get a diff specifying the project ID
+
+> gitlab-tool get diff -p 28247395 -m 291
+
+* displays diff format *
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		prID, _ := cmd.Flags().GetInt("project-id")
 		mrID, _ := cmd.Flags().GetInt("mr-id")
+
+		if prID > 0 && cwdProjectID > 0 && prID != cwdProjectID {
+			logrus.Warn(fmt.Sprintf("The projectID provided via --project-id (-p) doesn't match %d", cwdProjectID))
+		}
+		// Default to --project-id (-p) passed in
+		if prID == 0 && cwdProjectID > 0 {
+			prID = cwdProjectID
+		}
+
 		getMergeRequestDiff(prID, mrID)
 	},
 }
 
 func getMergeRequestDiff(id int, iid int) error {
-	gitClient := gl.New(glHost, "", glToken)
 
 	// var uri string
 	uri := fmt.Sprintf("/projects/%d/merge_requests/%d/changes?access_raw_diffs=true", id, iid)
