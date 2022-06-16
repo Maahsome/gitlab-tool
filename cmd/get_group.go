@@ -13,20 +13,42 @@ import (
 var groupCmd = &cobra.Command{
 	Use:     "group",
 	Aliases: []string{"groups"},
-	Short:   "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short:   "Get a listing of gitlab group/groups",
+	Long: `EXAMPLE:
+List the group info of the group directory you are in, or the parent group of the
+project that you are in.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+> gitlab-tool get group
+
+ID  	GROUP                                   	BASH
+1887	falkor/gitlab-automation/child-pipelines	<bash:gitlab-tool get project -g 1887>
+
+EXAMPLE:
+List all of the groups in the gitlab instance
+
+> gitlab-tool get group -a
+
+ID  	GROUP                                   	BASH
+620 	winston                                 	<bash:gitlab-tool get project -g 620>
+145 	www                                     	<bash:gitlab-tool get project -g 145>
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		glUser, _ := cmd.Flags().GetString("user")
 		glGroup, _ := cmd.Flags().GetInt("group")
-		if glGroup > 0 {
-			getGroup(glGroup, glUser)
-		} else {
+		showAll, _ := cmd.Flags().GetBool("all")
+
+		if glGroup > 0 && cwdGroupID > 0 && glGroup != cwdGroupID {
+			logrus.Warn(fmt.Sprintf("The groupID provided via --group (-g) doesn't match %d", cwdGroupID))
+		}
+		// Default to --project-id (-p) passed in
+		if glGroup == 0 && cwdGroupID > 0 {
+			glGroup = cwdGroupID
+		}
+
+		if showAll {
 			getGroups(glUser)
+		} else {
+			getGroup(glGroup, glUser)
 		}
 	},
 }
@@ -93,4 +115,5 @@ func init() {
 
 	groupCmd.Flags().StringP("user", "u", "", "Specify the gitlab User")
 	groupCmd.Flags().IntP("group", "g", 0, "Specify a single group to fetch")
+	groupCmd.Flags().BoolP("all", "a", false, "Show ALL Groups, normally only show parent group")
 }
