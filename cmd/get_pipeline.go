@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
-	"github.com/go-resty/resty/v2"
-	"github.com/olekukonko/tablewriter"
+	gl "github.com/maahsome/gitlab-go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -28,75 +26,73 @@ type Pipeline []struct {
 var pipelineCmd = &cobra.Command{
 	Use:     "pipeline",
 	Aliases: []string{"pipelines"},
-	Short:   "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short:   "Display a list of pipelines",
+	Long: `EXAMPLE:
+Get the pipelines for the current working directory project.  The output will
+provide command lines that can be made to be clickable in iTerm2 in order to
+list JOBS, and them follow on to list TRACES.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+> gitlab-tool get pipelines
+
+ID     	PROJECT ID	STATUS  	JOBS
+1389624	6609      	success 	<bash:gitlab-tool get jobs -p 6609 -l 1389624>
+1366864	6609      	success 	<bash:gitlab-tool get jobs -p 6609 -l 1366864>
+1366850	6609      	success 	<bash:gitlab-tool get jobs -p 6609 -l 1366850>
+1366833	6609      	failed  	<bash:gitlab-tool get jobs -p 6609 -l 1366833>
+1366705	6609      	failed  	<bash:gitlab-tool get jobs -p 6609 -l 1366705>
+1366182	6609      	success 	<bash:gitlab-tool get jobs -p 6609 -l 1366182>
+...
+...
+...
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		prID, _ := cmd.Flags().GetInt("project-id")
 		glUser, _ := cmd.Flags().GetString("user")
+
+		if prID > 0 && cwdProjectID > 0 && prID != cwdProjectID {
+			logrus.Warn(fmt.Sprintf("The projectID provided via --project-id (-p) doesn't match %d", cwdProjectID))
+		}
+		// Default to --project-id (-p) passed in
+		if prID == 0 && cwdProjectID > 0 {
+			prID = cwdProjectID
+		}
+
 		err := getPipeline(prID, glUser)
 		if err != nil {
-			logrus.WithError(err).Error("Bad, bad programmer")
+			logrus.WithError(err).Error("Bad, bad programmer, failed to fetch pipeline list")
 		}
 	},
 }
 
 func getPipeline(id int, user string) error {
-	restClient := resty.New()
 
-	var uri string
-	if len(user) > 0 {
-		uri = fmt.Sprintf("https://%s/api/v4/projects/%d/pipelines?username=%s", glHost, id, user)
-	} else {
-		uri = fmt.Sprintf("https://%s/api/v4/projects/%d/pipelines", glHost, id)
+	pipelines, err := gitClient.GetPipelines(id, user)
+	if err != nil {
+		// logrus.WithError(err).Error("Failed to fetch pipeline list")
+		return err
 	}
 
-	resp, resperr := restClient.R().
-		SetHeader("PRIVATE-TOKEN", glToken).
-		Get(uri)
-
-	if resperr != nil {
-		logrus.WithError(resperr).Error("Oops")
-	}
-
-	var pl Pipeline
-	marshErr := json.Unmarshal(resp.Body(), &pl)
-	if marshErr != nil {
-		logrus.Fatal("Cannot marshall Pipeline", marshErr)
-	}
-
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"ID", "PROJECT_ID", "STATUS", "JOBS"})
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetBorder(false)
-	table.SetTablePadding("\t")
-	table.SetNoWhiteSpace(true)
-
-	for _, v := range pl {
-
-		row := []string{
-			fmt.Sprintf("%d", v.ID),
-			fmt.Sprintf("%d", v.ProjectID),
-			v.Status,
-			fmt.Sprintf("<bash:gitlab-tool get jobs -p %d -l %d>", v.ProjectID, v.ID),
-		}
-		table.Append(row)
-	}
-	table.Render()
-
-	// fmt.Println(string(resp.Body()[:]))
+	fmt.Println(plDataToString(pipelines, fmt.Sprintf("%#v", pipelines)))
 
 	return nil
+}
+
+func plDataToString(plData gl.Pipelines, raw string) string {
+
+	switch strings.ToLower(c.OutputFormat) {
+	case "raw":
+		return raw
+	case "json":
+		return plData.ToJSON()
+	case "gron":
+		return plData.ToGRON()
+	case "yaml":
+		return plData.ToYAML()
+	case "text", "table":
+		return plData.ToTEXT(c.NoHeaders)
+	default:
+		return plData.ToTEXT(c.NoHeaders)
+	}
 }
 
 func init() {
@@ -104,13 +100,4 @@ func init() {
 
 	pipelineCmd.Flags().IntP("project-id", "p", 0, "Specify the ProjectID")
 	pipelineCmd.Flags().StringP("user", "u", "", "Specify the gitlab User")
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// pipelineCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// pipelineCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
