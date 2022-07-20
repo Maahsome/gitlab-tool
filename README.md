@@ -6,6 +6,12 @@ The interesting challenge was the propagation of the IDs from one command line t
 
 Once you have Smart Selection and Actions setup, the output of this CLI tool contains `bash:` links.  When you hold the COMMAND key, these links will be clickable and will send the matching text (after the `bash:`) to the command line.
 
+## Installation
+
+```bash
+brew install maahsome/tap/gitlab-tool --formula
+```
+
 ## Smart Selection and Action Setup
 
 Smart Selection is in iTerm2 Preferences, Profiles, Advanced, Smart Selection.  Edit the Smart Selection list, click the + to add a new item.
