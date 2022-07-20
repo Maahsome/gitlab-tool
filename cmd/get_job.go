@@ -157,7 +157,7 @@ func getPipelineJobs(pr int, pl int) error {
 			fmt.Sprintf("%d", v.ID),
 			v.Status,
 			v.Name,
-			fmt.Sprintf("<bash:gitlab-tool get trace -p %d -j %d>", v.Pipeline.ProjectID, v.ID),
+			fmt.Sprintf("<bash:watch -n 20 \"gitlab-tool get trace -p %d -j %d | tail -n 50 | decolorize\">", v.Pipeline.ProjectID, v.ID),
 		}
 		table.Append(row)
 	}
