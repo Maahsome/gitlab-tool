@@ -2,13 +2,15 @@ module github.com/maahsome/gitlab-tool
 
 go 1.17
 
-// replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/Worktrees/GG-3/gitlab-go/add-pipeline-objects
+// replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/Worktrees/GG-4/gitlab-go/cicd-variables
+// replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/src/cmaahsProjects/Maahsome/gitlab-go
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/maahsome/gitlab-go v0.1.9
+	github.com/integralist/go-findroot v0.0.0-20160518114804-ac90681525dc
+	github.com/maahsome/gitlab-go v0.1.11
 	github.com/maahsome/gron v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/sirupsen/logrus v1.8.1

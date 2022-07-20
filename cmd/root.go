@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	git "github.com/go-git/go-git/v5"
+	"github.com/integralist/go-findroot/find"
 	gl "github.com/maahsome/gitlab-go"
 	"github.com/maahsome/gitlab-tool/cmd/config"
 	"github.com/maahsome/gitlab-tool/cmd/objects"
@@ -69,6 +70,7 @@ var rootCmd = &cobra.Command{
 				os.Exit(1)
 			}
 		}
+		logrus.SetLevel(logrus.DebugLevel)
 	},
 }
 
@@ -85,8 +87,15 @@ func getCurrentWorkingDirGitInfo() {
 	}
 	currentWorkDir = workDir
 
-	logrus.Debug(fmt.Sprintf("workDir: %s", workDir))
-	gitDir := fmt.Sprintf("%s/.git", workDir)
+	gitRoot, gerr := find.Repo()
+	if gerr != nil {
+		logrus.Debug("Failed to get the git root")
+		gitRoot.Path = currentWorkDir
+	}
+	logrus.Debug(fmt.Sprintf("gitRoot: %s", gitRoot.Path))
+
+	gitDir := fmt.Sprintf("%s/.git", gitRoot.Path)
+	logrus.Debug(fmt.Sprintf("gitDir: %s", gitDir))
 	if stat, err := os.Stat(gitDir); err == nil {
 		if !stat.IsDir() {
 			realDir, rerr := os.ReadFile(gitDir)
@@ -94,6 +103,9 @@ func getCurrentWorkingDirGitInfo() {
 				logrus.Fatal("Failed to read the worktree gitdir...")
 			}
 			workDir = strings.TrimSuffix(strings.Split(strings.TrimSpace(strings.TrimPrefix(string(realDir[:]), "gitdir: ")), ".git")[0], "/")
+			gitRoot.Path = workDir
+			logrus.Debug(fmt.Sprintf("gitRoot: %s", gitRoot.Path))
+			logrus.Debug(fmt.Sprintf("workDir: %s", workDir))
 		}
 	} else {
 		inProject = false
@@ -132,7 +144,7 @@ func getCurrentWorkingDirGitInfo() {
 	gitClient = gl.New(glHost, "", glToken)
 
 	if inProject {
-		repo, rerr := git.PlainOpen(workDir)
+		repo, rerr := git.PlainOpen(gitRoot.Path)
 		if rerr != nil {
 			logrus.Fatal("Error retrieving git info")
 		}
@@ -140,7 +152,7 @@ func getCurrentWorkingDirGitInfo() {
 		if rcerr != nil {
 			logrus.Fatal("Error getting Config")
 		}
-		// fmt.Printf("%#v\n", repoConfig)
+		// fmt.Printf("%#v\n", repoConfig.Remotes)
 		pURLs, _ := giturls.Parse(repoConfig.Remotes["origin"].URLs[0])
 		glSlug := strings.TrimPrefix(strings.TrimSuffix(pURLs.EscapedPath(), ".git"), "/")
 		glSlug = url.PathEscape(glSlug)
@@ -156,7 +168,7 @@ func getCurrentWorkingDirGitInfo() {
 	}
 
 	grSlug := url.PathEscape(glGroup)
-	subSlug := strings.TrimPrefix(workDir, configDir)
+	subSlug := strings.TrimPrefix(gitRoot.Path, configDir)
 	if len(subSlug) > 0 {
 		if inProject {
 			grSub := filepath.Dir(subSlug)
