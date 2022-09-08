@@ -20,15 +20,16 @@ gitlab-tool config group --gitlab-host git.alteryx.com --group futurama --envvar
 # while in a top level group or sub-group
 gitlab-tool ls             # output a LS like listing, identifying GROUPS/PROJECTS
                            # this process could be in charge of mkdir for ALL groups at this level
-ge-w bender
-gc-- farnsworth
-ge+- hermes
-p--- test-project
+ge-w- bender
+gc--- farnsworth
+ge+-- hermes
+p---1 test-project
 
 -     : group or project (g/p)
  -    : exists on disk (e exists, c created)
   -   : dirty (- clean, + dirty)
    -  : has worktrees (-/w)
+    - : MRs open
 # tree from current location
 gitlab-tool tree
 

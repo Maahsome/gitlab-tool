@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -45,6 +45,7 @@ Perhaps you want to override the group in which you are creating the new project
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		glGroup, _ := cmd.Flags().GetInt("group")
+		cloneAfter, _ := cmd.Flags().GetBool("clone")
 		projName, _ := cmd.Flags().GetString("name")
 		projVisibility, _ := cmd.Flags().GetString("visibility")
 
@@ -56,23 +57,28 @@ Perhaps you want to override the group in which you are creating the new project
 			glGroup = cwdGroupID
 		}
 
-		createProject(projName, projVisibility, glGroup)
+		createProject(projName, projVisibility, glGroup, cloneAfter)
 	},
 }
 
-func createProject(path string, visibility string, group int) {
+func createProject(path string, visibility string, group int, cloneAfter bool) {
 
 	newProject, err := gitClient.CreateProject(group, path, visibility)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create project")
+	} else {
+		fmt.Printf("New project %s (%d) has been created", newProject.Path, newProject.ID)
+		if cloneAfter {
+			cloneProject(path)
+		}
 	}
-	fmt.Printf("New project %s (%d) has been created", newProject.Path, newProject.ID)
 }
 
 func init() {
 	createCmd.AddCommand(createProjectCmd)
 
 	createProjectCmd.Flags().IntP("group", "g", 0, "Specify the group to create the project in")
+	createProjectCmd.Flags().BoolP("clone", "c", false, "Clone the project directly after creation")
 	createProjectCmd.Flags().StringP("name", "n", "", "Specify the name/path of the project")
 	createProjectCmd.Flags().StringP("visibility", "v", "internal", "Specify the visibility of the project")
 	createProjectCmd.MarkFlagRequired("name")
