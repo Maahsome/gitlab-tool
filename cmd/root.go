@@ -34,6 +34,7 @@ var (
 	cwdGroupID     int
 	cwdGitlabHost  string
 	configDir      string
+	topGroupName   string
 	currentWorkDir string
 	gitClient      gl.GitlabClient
 
@@ -113,6 +114,7 @@ func getCurrentWorkingDirGitInfo() {
 
 	glGroup := ""
 	configDir = ""
+	topGroupName = ""
 	var configList objects.ConfigList
 	err := viper.UnmarshalKey("configs", &configList)
 	if err != nil {
@@ -125,6 +127,7 @@ func getCurrentWorkingDirGitInfo() {
 			glHost = v.Host
 			tokenVar = v.EnvVar
 			glGroup = v.Group
+			topGroupName = v.Group
 			missingConfig = false
 			break
 		}

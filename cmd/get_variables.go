@@ -31,6 +31,7 @@ IID	TITLE                                  	STATE 	AUTHOR      	CREATED         
 	Run: func(cmd *cobra.Command, args []string) {
 		prID, _ := cmd.Flags().GetInt("project-id")
 		showAll, _ := cmd.Flags().GetBool("all")
+		includeProject, _ := cmd.Flags().GetBool("project-vars")
 
 		if prID > 0 && cwdProjectID > 0 && prID != cwdProjectID {
 			logrus.Warn(fmt.Sprintf("The projectID provided via --project-id (-p) doesn't match %d", cwdProjectID))
@@ -39,22 +40,39 @@ IID	TITLE                                  	STATE 	AUTHOR      	CREATED         
 		if prID == 0 && cwdProjectID > 0 {
 			prID = cwdProjectID
 		}
-		err := getVariables(prID, showAll)
+		err := getVariables(prID, showAll, includeProject)
 		if err != nil {
 			logrus.WithError(err).Error("Bad, bad programmer")
 		}
 	},
 }
 
-func getVariables(id int, all bool) error {
+func getVariables(id int, all bool, projects bool) error {
 
-	variables, err := gitClient.GetCicdVariables(id)
-	if err != nil {
-		logrus.WithError(err).Error("Bad fetch from gitlab")
+	if all {
+		if projects {
+			logrus.Warn("You have chosen to include PROJECT level variables, this will take awhile...")
+		}
+		// TODO: detect the TOP level group based on where you are at in the directory tree
+		topGroupID, err := gitClient.GetGroupID(topGroupName)
+		if err != nil {
+			logrus.WithError(err).Fatal("Could not get the groupID for the top level group")
+		}
+		variables, err := gitClient.GetCicdVariablesFromGroup(topGroupID, projects)
+		if err != nil {
+			logrus.WithError(err).Error("Bad fetch from gitlab")
+		}
+
+		fmt.Println(variableDataToString(variables, fmt.Sprintf("%#v", variables)))
+	} else {
+		variables, err := gitClient.GetCicdVariables(id)
+		if err != nil {
+			logrus.WithError(err).Error("Bad fetch from gitlab")
+		}
+
+		fmt.Println(variableDataToString(variables, fmt.Sprintf("%#v", variables)))
+
 	}
-
-	fmt.Println(variableDataToString(variables, fmt.Sprintf("%#v", variables)))
-
 	return nil
 }
 
@@ -80,5 +98,6 @@ func init() {
 	getCmd.AddCommand(getVariablesCmd)
 
 	getVariablesCmd.Flags().IntP("project-id", "p", 0, "Specify the ProjectID")
-	getVariablesCmd.Flags().BoolP("all", "a", false, "Show ALL MRs, normally only show 'opened'")
+	getVariablesCmd.Flags().BoolP("all", "a", false, "Show ALL CICD Variables starting at the TOP level group")
+	getVariablesCmd.Flags().Bool("project-vars", false, "Return PROJECT level CICD Variables as well (assumes -a) LONG RUN TIME")
 }
