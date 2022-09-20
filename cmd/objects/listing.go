@@ -15,9 +15,10 @@ import (
 type GitListing []GitListItem
 
 type GitListItem struct {
-	StatBlock string `json:"stat_block"`
-	Path      string `json:"path"`
-	ID        int    `json:"id"`
+	StatBlock   string `json:"stat_block"`
+	Path        string `json:"path"`
+	Description string `json:"description"`
+	ID          int    `json:"id"`
 }
 
 // ToJSON - Write the output as JSON
@@ -55,17 +56,20 @@ func (gl *GitListing) ToYAML() string {
 	return string(glYAML[:])
 }
 
-func (gl *GitListing) ToTEXT(noHeaders bool, showid bool) string {
+func (gl *GitListing) ToTEXT(noHeaders bool, showid bool, showDesc bool) string {
 	buf, row := new(bytes.Buffer), make([]string, 0)
 
 	// ************************** TableWriter ******************************
 	table := tablewriter.NewWriter(buf)
 	if !noHeaders {
-		if showid {
-			table.SetHeader([]string{"STAT", "PATH", "ID"})
-		} else {
-			table.SetHeader([]string{"STAT", "PATH"})
+		headerText := []string{"STAT", "PATH"}
+		if showDesc {
+			headerText = append(headerText, "DESCRIPTION")
 		}
+		if showid {
+			headerText = append(headerText, "ID")
+		}
+		table.SetHeader(headerText)
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	}
 
@@ -81,17 +85,39 @@ func (gl *GitListing) ToTEXT(noHeaders bool, showid bool) string {
 	table.SetNoWhiteSpace(true)
 
 	// for i=0; i<=len(mr); i++ {
+	displayOptions := 0
+	if showid {
+		displayOptions += 1
+	}
+	if showDesc {
+		displayOptions += 2
+	}
+
 	for _, v := range *gl {
-		if showid {
+		switch displayOptions {
+		case 0:
+			row = []string{
+				v.StatBlock,
+				v.Path,
+			}
+		case 1:
 			row = []string{
 				v.StatBlock,
 				v.Path,
 				fmt.Sprintf("%d", v.ID),
 			}
-		} else {
+		case 2:
 			row = []string{
 				v.StatBlock,
 				v.Path,
+				v.Description,
+			}
+		case 3:
+			row = []string{
+				v.StatBlock,
+				v.Path,
+				v.Description,
+				fmt.Sprintf("%d", v.ID),
 			}
 		}
 		table.Append(row)
