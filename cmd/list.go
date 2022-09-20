@@ -34,10 +34,12 @@ pe+-5 test-project
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		showIDs, _ := cmd.Flags().GetBool("show-ids")
+		showDescription, _ := cmd.Flags().GetBool("show-description")
+
 		if inProject {
 			fmt.Println("You are currently in a PROJECT directory, nothing to list")
 		} else {
-			gitlabListing(showIDs)
+			gitlabListing(showIDs, showDescription)
 		}
 	},
 }
@@ -127,7 +129,7 @@ func buildStatBlock(itemType string, path string, objID int) string {
 	return sb
 }
 
-func gitlabListing(showIDs bool) {
+func gitlabListing(showIDs bool, showDescription bool) {
 
 	var list objects.GitListing
 
@@ -140,9 +142,10 @@ func gitlabListing(showIDs bool) {
 	}
 	for _, v := range subGroups {
 		list = append(list, objects.GitListItem{
-			StatBlock: buildStatBlock("g", v.Path, v.ID),
-			Path:      v.Path,
-			ID:        v.ID,
+			StatBlock:   buildStatBlock("g", v.Path, v.ID),
+			Path:        v.Path,
+			Description: v.Description,
+			ID:          v.ID,
 		})
 		// fmt.Printf("%s -> %s\n", v.Path, v.FullPath)
 	}
@@ -155,9 +158,10 @@ func gitlabListing(showIDs bool) {
 	for _, v := range projects {
 		if v.Namespace.ID == cwdGroupID {
 			list = append(list, objects.GitListItem{
-				StatBlock: buildStatBlock("p", v.Path, v.ID),
-				Path:      v.Path,
-				ID:        v.ID,
+				StatBlock:   buildStatBlock("p", v.Path, v.ID),
+				Path:        v.Path,
+				Description: v.Description,
+				ID:          v.ID,
 			})
 		}
 		// fmt.Printf("%s -> %s\n", v.Path, v.FullPath)
@@ -165,10 +169,10 @@ func gitlabListing(showIDs bool) {
 
 	// output the data
 
-	fmt.Println(glDataToString(list, "", showIDs))
+	fmt.Println(glDataToString(list, "", showIDs, showDescription))
 }
 
-func glDataToString(glData objects.GitListing, raw string, showid bool) string {
+func glDataToString(glData objects.GitListing, raw string, showid bool, showDesc bool) string {
 
 	switch strings.ToLower(c.OutputFormat) {
 	case "raw":
@@ -180,15 +184,16 @@ func glDataToString(glData objects.GitListing, raw string, showid bool) string {
 	case "yaml":
 		return glData.ToYAML()
 	case "text", "table":
-		return glData.ToTEXT(c.NoHeaders, showid)
+		return glData.ToTEXT(c.NoHeaders, showid, showDesc)
 	default:
-		return glData.ToTEXT(c.NoHeaders, showid)
+		return glData.ToTEXT(c.NoHeaders, showid, showDesc)
 	}
 }
 
 func init() {
 	rootCmd.AddCommand(listCmd)
 	listCmd.Flags().BoolP("show-ids", "i", false, "Show the associated gitlab IDs")
+	listCmd.Flags().BoolP("show-description", "d", false, "Show the description of the projects")
 }
 
 // exists returns whether the given file or directory exists or not
