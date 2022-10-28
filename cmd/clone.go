@@ -112,7 +112,7 @@ func cloneProject(name string) {
 					Username: "access_token",
 					Password: token,
 				},
-				Depth:    1,
+				// Depth:    1,
 				Progress: os.Stderr,
 			})
 			if err != nil {
