@@ -10,6 +10,7 @@ import (
 	"github.com/maahsome/gron"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
 
@@ -203,6 +204,7 @@ func (mr *MergeRequest) ToTEXT(noHeaders bool) string {
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
 
+	bashLine := viper.GetString("bash_mr_diff")
 	// for i=0; i<=len(mr); i++ {
 	for _, v := range *mr {
 		row = []string{
@@ -211,7 +213,8 @@ func (mr *MergeRequest) ToTEXT(noHeaders bool) string {
 			v.State,
 			v.Author.Name,
 			v.CreatedAt.Format("2006-01-02 15:04:05"),
-			fmt.Sprintf("<bash:gitlab-tool get diff -p %d -m %d>", v.ProjectID, v.Iid),
+			fmt.Sprintf(bashLine, v.ProjectID, v.Iid),
+			// fmt.Sprintf("<bash:gitlab-tool get diff -p %d -m %d>", v.ProjectID, v.Iid),
 		}
 		table.Append(row)
 	}

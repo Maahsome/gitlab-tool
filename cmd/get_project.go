@@ -11,6 +11,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type Project []struct {
@@ -351,16 +352,22 @@ func getProject(id int, user string, opts int) error {
 	table.SetTablePadding("\t")
 	table.SetNoWhiteSpace(true)
 
+	bashUserLine := viper.GetString("bash_pipeline_user")
+	bashLine := viper.GetString("bash_pipeline")
+	bashMR := viper.GetString("bash_mr")
 	for _, v := range pr {
 
 		var cmdLine string
 		var mrLine string
 		if len(user) > 0 {
-			cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d -u %s>", v.ID, user)
+			cmdLine = fmt.Sprintf(bashUserLine, v.ID, user)
+			// cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d -u %s>", v.ID, user)
 		} else {
-			cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d>", v.ID)
+			cmdLine = fmt.Sprintf(bashLine, v.ID)
+			// cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d>", v.ID)
 		}
-		mrLine = fmt.Sprintf("<bash:gitlab-tool get mr -p %d>", v.ID)
+		mrLine = fmt.Sprintf(bashMR, v.ID)
+		// mrLine = fmt.Sprintf("<bash:gitlab-tool get mr -p %d>", v.ID)
 
 		row := []string{}
 		switch opts {

@@ -10,6 +10,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type PipelineJob []struct {
@@ -151,13 +152,15 @@ func getPipelineJobs(pr int, pl int) error {
 	table.SetTablePadding("\t")
 	table.SetNoWhiteSpace(true)
 
+	bashLine := viper.GetString("bash_job")
 	for _, v := range pj {
 
 		row := []string{
 			fmt.Sprintf("%d", v.ID),
 			v.Status,
 			v.Name,
-			fmt.Sprintf("<bash:watch -n 20 \"gitlab-tool get trace -p %d -j %d | tail -n 50 | decolorize\">", v.Pipeline.ProjectID, v.ID),
+			fmt.Sprintf(bashLine, v.Pipeline.ProjectID, v.ID),
+			// fmt.Sprintf("<bash:watch -n 20 \"gitlab-tool get trace -p %d -j %d | tail -n 50 | decolorize\">", v.Pipeline.ProjectID, v.ID),
 		}
 		table.Append(row)
 	}
