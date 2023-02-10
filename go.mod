@@ -8,6 +8,7 @@ go 1.17
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/integralist/go-findroot v0.0.0-20160518114804-ac90681525dc

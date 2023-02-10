@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/acarl005/stripansi"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -38,7 +39,8 @@ func getJobTrace(pr int, pj int) error {
 		logrus.WithError(resperr).Error("Oops")
 	}
 
-	fmt.Println(string(resp.Body()[:]))
+	plainText := stripansi.Strip(string(resp.Body()[:]))
+	fmt.Println(plainText)
 
 	return nil
 }
