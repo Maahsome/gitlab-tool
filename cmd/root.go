@@ -237,9 +237,24 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		logrus.Warn("Failed to read viper config file.")
+	} else {
+	checkAndUpdateConfig("bash_pipeline_user", `<bash:gitlab-tool get pipeline -p %d -u %s>`)
+	checkAndUpdateConfig("bash_pipeline", `<bash:gitlab-tool get pipeline -p %d>`)
+	checkAndUpdateConfig("bash_mr", `<bash:gitlab-tool get mr -p %d>`)
+	checkAndUpdateConfig("bash_mr_diff", `<bash:gitlab-tool get diff -p %d -m %d>`)
+	checkAndUpdateConfig("bash_job", `<bash:gitlab-tool get trace -p %d -j %d | tail -n 50>`)
+	if err := viper.WriteConfig(); err != nil {
+		logrus.WithError(err).Error("Error writing default config entries")
 	}
 }
+}
 
+func checkAndUpdateConfig(name string, value string) {
+	test := viper.GetString(name)
+	if len(test) == 0 {
+		viper.Set(name, value)
+	}
+}
 func createRestrictedConfigFile(fileName string) {
 	if _, err := os.Stat(fileName); err != nil {
 		if os.IsNotExist(err) {
