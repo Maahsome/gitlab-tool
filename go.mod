@@ -12,7 +12,7 @@ require (
 	github.com/go-git/go-git/v5 v5.5.2
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/integralist/go-findroot v0.0.0-20160518114804-ac90681525dc
-	github.com/maahsome/gitlab-go v0.1.15
+	github.com/maahsome/gitlab-go v0.1.16
 	github.com/maahsome/gron v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/sirupsen/logrus v1.9.0

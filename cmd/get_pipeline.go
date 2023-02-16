@@ -48,6 +48,7 @@ ID     	PROJECT ID	STATUS  	JOBS
 	Run: func(cmd *cobra.Command, args []string) {
 		prID, _ := cmd.Flags().GetInt("project-id")
 		glUser, _ := cmd.Flags().GetString("user")
+		limit, _ := cmd.Flags().GetInt("limit")
 
 		if prID > 0 && cwdProjectID > 0 && prID != cwdProjectID {
 			logrus.Warn(fmt.Sprintf("The projectID provided via --project-id (-p) doesn't match %d", cwdProjectID))
@@ -57,16 +58,16 @@ ID     	PROJECT ID	STATUS  	JOBS
 			prID = cwdProjectID
 		}
 
-		err := getPipeline(prID, glUser)
+		err := getPipeline(prID, glUser, limit)
 		if err != nil {
 			logrus.WithError(err).Error("Bad, bad programmer, failed to fetch pipeline list")
 		}
 	},
 }
 
-func getPipeline(id int, user string) error {
+func getPipeline(id int, user string, limit int) error {
 
-	pipelines, err := gitClient.GetPipelines(id, user)
+	pipelines, err := gitClient.GetPipelines(id, user, limit)
 	if err != nil {
 		// logrus.WithError(err).Error("Failed to fetch pipeline list")
 		return err
@@ -100,4 +101,5 @@ func init() {
 
 	pipelineCmd.Flags().IntP("project-id", "p", 0, "Specify the ProjectID")
 	pipelineCmd.Flags().StringP("user", "u", "", "Specify the gitlab User")
+	pipelineCmd.Flags().IntP("limit", "l", 10, "Specify the number of pipelines to return")
 }
