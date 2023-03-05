@@ -11,7 +11,7 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       -
@@ -19,7 +19,7 @@ jobs:
         run: echo PREVIOUS_TAG=$(curl -Ls https://api.github.com/repos/maahsome/gitlab-tool/releases/latest | jq -r '.tag_name') >> ${GITHUB_ENV}
       -
         name: Run ChangeLog-PR
-        uses: Maahsome/changelog-pr-action@v1.0
+        uses: Maahsome/changelog-pr-action@v2.0
         with:
           previous_tag: $PREVIOUS_TAG
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -27,7 +27,7 @@ jobs:
           changelog_dir: changelog
       -
         name: Get Artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: v0.0.0-NEXT
       -
@@ -36,9 +36,10 @@ jobs:
           cat changelog/v0.0.0-NEXT.md
       -
         name: Commit ChangeLog
-        uses: EndBug/add-and-commit@v7
+        uses: EndBug/add-and-commit@v9
         with:
           add: 'changelog/v0.0.0-NEXT.md'
           committer_name: Christopher Maahs
           committer_email: cmaahs@gmail.com
           message: 'Update v0.0.0-NEXT.md running changelog'
+
