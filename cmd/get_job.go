@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/muesli/termenv"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -120,6 +121,7 @@ to quickly create a Cobra application.`,
 }
 
 func getPipelineJobs(pr int, pl int) error {
+	term := termenv.NewOutput(os.Stdout)
 	restClient := resty.New()
 
 	uri := fmt.Sprintf("https://%s/api/v4/projects/%d/pipelines/%d/jobs", glHost, pr, pl)
@@ -140,9 +142,11 @@ func getPipelineJobs(pr int, pl int) error {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"ID", "STATUS", "NAME", "TRACE"})
+	// table.SetHeader([]string{"ID", "STATUS", "NAME", "TRACE"})
+	table.SetHeader([]string{"ID", "STATUS", "NAME"})
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
+	table.SetAutoFormatHeaders(false)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetCenterSeparator("")
 	table.SetColumnSeparator("")
@@ -158,8 +162,8 @@ func getPipelineJobs(pr int, pl int) error {
 		row := []string{
 			fmt.Sprintf("%d", v.ID),
 			v.Status,
-			v.Name,
-			fmt.Sprintf(bashLine, v.Pipeline.ProjectID, v.ID),
+			term.Hyperlink(fmt.Sprintf(bashLine, v.Pipeline.ProjectID, v.ID), v.Name),
+			// term.Hyperlink(fmt.Sprintf(bashLine, v.Pipeline.ProjectID, v.ID), fmt.Sprintf("%d-%d", v.Pipeline.ProjectID, v.ID)),
 			// fmt.Sprintf("<bash:watch -n 20 \"gitlab-tool get trace -p %d -j %d | tail -n 50 | decolorize\">", v.Pipeline.ProjectID, v.ID),
 		}
 		table.Append(row)
