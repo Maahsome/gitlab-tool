@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/maahsome/gron"
+	"github.com/muesli/termenv"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -184,17 +186,19 @@ func (mr *MergeRequest) ToYAML() string {
 }
 
 func (mr *MergeRequest) ToTEXT(noHeaders bool) string {
+	term := termenv.NewOutput(os.Stdout)
 	buf, row := new(bytes.Buffer), make([]string, 0)
 
 	// ************************** TableWriter ******************************
 	table := tablewriter.NewWriter(buf)
 	if !noHeaders {
-		table.SetHeader([]string{"IID", "TITLE", "STATE", "AUTHOR", "CREATED", "DIFF"})
+		// table.SetHeader([]string{"IID", "TITLE", "STATE", "AUTHOR", "CREATED", "DIFF"})
+		table.SetHeader([]string{"IID", "TITLE", "STATE", "AUTHOR", "CREATED"})
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	}
 
 	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
+	table.SetAutoFormatHeaders(false)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetCenterSeparator("")
 	table.SetColumnSeparator("")
@@ -212,8 +216,8 @@ func (mr *MergeRequest) ToTEXT(noHeaders bool) string {
 			strings.TrimSpace(v.Title),
 			v.State,
 			v.Author.Name,
-			v.CreatedAt.Format("2006-01-02 15:04:05"),
-			fmt.Sprintf(bashLine, v.ProjectID, v.Iid),
+			term.Hyperlink(fmt.Sprintf(bashLine, v.ProjectID, v.Iid), v.CreatedAt.Format("2006-01-02 15:04:05")),
+			// term.Hyperlink(fmt.Sprintf(bashLine, v.ProjectID, v.Iid), fmt.Sprintf("%d-%d", v.ProjectID, v.Iid)),
 			// fmt.Sprintf("<bash:gitlab-tool get diff -p %d -m %d>", v.ProjectID, v.Iid),
 		}
 		table.Append(row)

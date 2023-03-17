@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/muesli/termenv"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -313,6 +314,7 @@ to quickly create a Cobra application.`,
 }
 
 func getProject(id int, user string, opts int) error {
+	term := termenv.NewOutput(os.Stdout)
 	restClient := resty.New()
 
 	uri := fmt.Sprintf("https://%s/api/v4/groups/%d/projects", glHost, id)
@@ -332,14 +334,15 @@ func getProject(id int, user string, opts int) error {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	switch opts {
-	case 1:
-		table.SetHeader([]string{"ID", "NAME", "PATH", "PIPELINES"})
-	case 2:
-		table.SetHeader([]string{"ID", "NAME", "PATH", "MR"})
-	case 3:
-		table.SetHeader([]string{"ID", "NAME", "PATH", "PIPELINE / MR"})
-	}
+	// switch opts {
+	// case 1:
+	// 	table.SetHeader([]string{"ID", "NAME", "PATH", "PIPELINES"})
+	// case 2:
+	// 	table.SetHeader([]string{"ID", "NAME", "PATH", "MR"})
+	// case 3:
+	// 	table.SetHeader([]string{"ID", "NAME", "PATH", "PIPELINE / MR"})
+	// }
+	table.SetHeader([]string{"ID", "NAME", "PATH", "LINKS"})
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
@@ -357,42 +360,43 @@ func getProject(id int, user string, opts int) error {
 	bashMR := viper.GetString("bash_mr")
 	for _, v := range pr {
 
-		var cmdLine string
-		var mrLine string
+		var idField string
+		// var mrLine string
 		if len(user) > 0 {
-			cmdLine = fmt.Sprintf(bashUserLine, v.ID, user)
+			idField = term.Hyperlink(fmt.Sprintf(bashUserLine, v.ID, user), "Pipelines")
 			// cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d -u %s>", v.ID, user)
 		} else {
-			cmdLine = fmt.Sprintf(bashLine, v.ID)
+			idField = term.Hyperlink(fmt.Sprintf(bashLine, v.ID), "Pipelines")
 			// cmdLine = fmt.Sprintf("<bash:gitlab-tool get pipeline -p %d>", v.ID)
 		}
-		mrLine = fmt.Sprintf(bashMR, v.ID)
+		// mrLine = term.Hyperlink(fmt.Sprintf(bashMR, v.ID), fmt.Sprintf("%d", v.ID))
 		// mrLine = fmt.Sprintf("<bash:gitlab-tool get mr -p %d>", v.ID)
 
 		row := []string{}
-		switch opts {
-		case 1:
-			row = []string{
-				fmt.Sprintf("%d", v.ID),
-				v.Name,
-				v.Path,
-				cmdLine,
-			}
-		case 2:
-			row = []string{
-				fmt.Sprintf("%d", v.ID),
-				v.Name,
-				v.Path,
-				mrLine,
-			}
-		case 3:
-			row = []string{
-				fmt.Sprintf("%d", v.ID),
-				v.Name,
-				v.Path,
-				fmt.Sprintf("%s\n%s", cmdLine, mrLine),
-			}
+		// switch opts {
+		// case 1:
+		row = []string{
+			fmt.Sprintf("%d", v.ID),
+			v.Name,
+			v.Path,
+			fmt.Sprintf("%s / %s", idField, term.Hyperlink(fmt.Sprintf(bashMR, v.ID), "MRs")),
+			// cmdLine,
 		}
+		// case 2:
+		// 	row = []string{
+		// 		idField,
+		// 		v.Name,
+		// 		v.Path,
+		// 		// mrLine,
+		// 	}
+		// case 3:
+		// 	row = []string{
+		// 		fmt.Sprintf("%d", v.ID),
+		// 		v.Name,
+		// 		v.Path,
+		// 		fmt.Sprintf("%s\n%s", cmdLine, mrLine),
+		// 	}
+		// }
 		table.Append(row)
 	}
 	table.Render()
