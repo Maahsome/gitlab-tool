@@ -64,9 +64,11 @@ to quickly create a Cobra application.`,
 		// gh pr create --title "RELEASE ${RELEASE_VERSION}" --body "Release ${RELEASE_VERSION}" --base main
 
 		mrTitle, _ := cmd.Flags().GetString("title")
-		// mrDescription, _ := cmd.Flags().GetString("description")
+		mrDescription, _ := cmd.Flags().GetString("description")
 		mrSource, _ := cmd.Flags().GetString("source")
 		mrTarget, _ := cmd.Flags().GetString("base")
+		squash, _ := cmd.Flags().GetBool("sqash-on-merge")
+		removeBranch, _ := cmd.Flags().GetBool("remove-source-branch")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		workDir, err := os.Getwd()
@@ -118,7 +120,7 @@ to quickly create a Cobra application.`,
 		if dryRun {
 			fmt.Printf("Create an MR on:\n\tProjectID: %d\n\tTitle: %s\n\tSource Branch: %s\n\tTarget Branch: %s\n", projectID, mrTitle, mrSource, mrTarget)
 		} else {
-			mrURL, mrerr := CreateMR(projectID, mrTitle, mrSource, mrTarget)
+			mrURL, mrerr := CreateMR(projectID, mrTitle, mrSource, mrTarget, mrDescription, squash, removeBranch)
 			if mrerr != nil {
 				logrus.WithError(mrerr).Fatal("Failed to create MR")
 			}
@@ -128,9 +130,9 @@ to quickly create a Cobra application.`,
 }
 
 // func CreateMR(projectID int, title string, body string, src string, dst string) (string, error) {
-func CreateMR(projectID int, title string, src string, dst string) (string, error) {
+func CreateMR(projectID int, title string, src string, dst string, description string, squash bool, removeSource bool) (string, error) {
 
-	resp, rerr := gitlabClient.CreateMergeRequest(projectID, title, src, dst)
+	resp, rerr := gitlabClient.CreateMergeRequest(projectID, title, src, dst, description, squash, removeSource)
 	if rerr != nil {
 		logrus.Fatal("Failed to create the MR")
 	}
@@ -151,10 +153,12 @@ func init() {
 	createCmd.AddCommand(createMrCmd)
 
 	createMrCmd.Flags().StringP("title", "t", "", "Specify the MR title")
-	// createMrCmd.Flags().StringP("description", "d", "", "Specify the MR description")
+	createMrCmd.Flags().StringP("description", "d", "", "Specify the MR description")
 	createMrCmd.Flags().StringP("source", "s", "", "Specify the MR source branch")
 	createMrCmd.Flags().StringP("base", "b", "", "Specify the MR base/target branch")
-	createMrCmd.Flags().BoolP("dry-run", "d", false, "No actions performed, just output what will happen")
+	createMrCmd.Flags().BoolP("squash-on-merge", "q", false, "Set the MR to squash-on-merge")
+	createMrCmd.Flags().BoolP("remove-source-branch", "r", true, "Set the MR to remove-source-branch")
+	createMrCmd.Flags().Bool("dry-run", false, "No actions performed, just output what will happen")
 	createMrCmd.MarkFlagRequired("title")
 	createMrCmd.MarkFlagRequired("base")
 }
