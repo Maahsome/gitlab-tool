@@ -6,6 +6,7 @@ go 1.19
 // replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/src/cmaahsProjects/Maahsome/gitlab-go
 // replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/Worktrees/GG-5/gitlab-go/all-vars-top-fix
 // replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/Worktrees/GG-10/gitlab-go/explicit-hyperlinks
+// replace github.com/maahsome/gitlab-go => /Users/christopher.maahs/Worktrees/GG-12/gitlab-go/mr-options
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
@@ -13,7 +14,7 @@ require (
 	github.com/go-git/go-git/v5 v5.5.2
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/integralist/go-findroot v0.0.0-20160518114804-ac90681525dc
-	github.com/maahsome/gitlab-go v0.1.17
+	github.com/maahsome/gitlab-go v0.1.18
 	github.com/maahsome/gron v0.1.0
 	github.com/muesli/termenv v0.15.1
 	github.com/olekukonko/tablewriter v0.0.5
