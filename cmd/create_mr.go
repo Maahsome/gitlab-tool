@@ -67,9 +67,13 @@ to quickly create a Cobra application.`,
 		mrDescription, _ := cmd.Flags().GetString("description")
 		mrSource, _ := cmd.Flags().GetString("source")
 		mrTarget, _ := cmd.Flags().GetString("base")
-		squash, _ := cmd.Flags().GetBool("sqash-on-merge")
+		nosquash, _ := cmd.Flags().GetBool("no-sqash-on-merge")
 		removeBranch, _ := cmd.Flags().GetBool("remove-source-branch")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+		// We want to squash by default, so to override would be adding
+		// --no-squash-on-merge, which sets to true, so we want the opposite
+		squash := !nosquash
 
 		workDir, err := os.Getwd()
 		if err != nil {
@@ -124,7 +128,7 @@ to quickly create a Cobra application.`,
 			if mrerr != nil {
 				logrus.WithError(mrerr).Fatal("Failed to create MR")
 			}
-			fmt.Printf("Merge Request: %s\n", mrURL)
+			fmt.Printf("%s", mrURL)
 		}
 	},
 }
@@ -156,7 +160,7 @@ func init() {
 	createMrCmd.Flags().StringP("description", "d", "", "Specify the MR description")
 	createMrCmd.Flags().StringP("source", "s", "", "Specify the MR source branch")
 	createMrCmd.Flags().StringP("base", "b", "", "Specify the MR base/target branch")
-	createMrCmd.Flags().BoolP("squash-on-merge", "q", false, "Set the MR to squash-on-merge")
+	createMrCmd.Flags().BoolP("no-squash-on-merge", "q", false, "Set the MR to squash-on-merge")
 	createMrCmd.Flags().BoolP("remove-source-branch", "r", true, "Set the MR to remove-source-branch")
 	createMrCmd.Flags().Bool("dry-run", false, "No actions performed, just output what will happen")
 	createMrCmd.MarkFlagRequired("title")
