@@ -19,7 +19,7 @@ jobs:
         run: echo PREVIOUS_TAG=$(curl -Ls https://api.github.com/repos/maahsome/gitlab-tool/releases/latest | jq -r '.tag_name') >> ${GITHUB_ENV}
       -
         name: Run ChangeLog-PR
-        uses: Maahsome/changelog-pr-action@v2.0
+        uses: Maahsome/changelog-pr-action@v3.0
         with:
           previous_tag: $PREVIOUS_TAG
           token: ${{ secrets.GITHUB_TOKEN }}
