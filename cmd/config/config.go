@@ -19,6 +19,7 @@ type (
 		NoHeaders        bool
 		CACert           string
 		CABundle         string
+		StripTimestamp   bool
 	}
 	Outputtable interface {
 		ToJSON() string

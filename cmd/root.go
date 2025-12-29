@@ -55,6 +55,7 @@ var rootCmd = &cobra.Command{
 		c.VersionDetail.GitCommit = gitCommit
 		c.VersionDetail.GitRef = gitRef
 		c.VersionJSON = fmt.Sprintf("{\"SemVer\": \"%s\", \"BuildDate\": \"%s\", \"GitCommit\": \"%s\", \"GitRef\": \"%s\"}", semVer, buildDate, gitCommit, gitRef)
+		c.StripTimestamp = viper.GetBool("strip_timestamp")
 
 		inProject = true
 		if os.Args[1] != "version" && os.Args[1] != "config" {
@@ -238,23 +239,29 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		logrus.Warn("Failed to read viper config file.")
 	} else {
-	checkAndUpdateConfig("bash_pipeline_user", `<bash:gitlab-tool get pipeline -p %d -u %s>`)
-	checkAndUpdateConfig("bash_pipeline", `<bash:gitlab-tool get pipeline -p %d>`)
-	checkAndUpdateConfig("bash_mr", `<bash:gitlab-tool get mr -p %d>`)
-	checkAndUpdateConfig("bash_mr_diff", `<bash:gitlab-tool get diff -p %d -m %d>`)
-	checkAndUpdateConfig("bash_job", `<bash:gitlab-tool get trace -p %d -j %d | tail -n 50>`)
-	if err := viper.WriteConfig(); err != nil {
-		logrus.WithError(err).Error("Error writing default config entries")
+		checkAndUpdateConfigString("bash_pipeline_user", `<bash:gitlab-tool get pipeline -p %d -u %s>`)
+		checkAndUpdateConfigString("bash_pipeline", `<bash:gitlab-tool get pipeline -p %d>`)
+		checkAndUpdateConfigString("bash_mr", `<bash:gitlab-tool get mr -p %d>`)
+		checkAndUpdateConfigString("bash_mr_diff", `<bash:gitlab-tool get diff -p %d -m %d>`)
+		checkAndUpdateConfigString("bash_job", `<bash:gitlab-tool get trace -p %d -j %d | tail -n 50>`)
+		checkAndUpdateConfigBool("strip_timestamp", false)
+		if err := viper.WriteConfig(); err != nil {
+			logrus.WithError(err).Error("Error writing default config entries")
+		}
 	}
 }
-}
 
-func checkAndUpdateConfig(name string, value string) {
-	test := viper.GetString(name)
-	if len(test) == 0 {
+func checkAndUpdateConfigString(name string, value string) {
+	if viper.IsSet(name) == false {
 		viper.Set(name, value)
 	}
 }
+func checkAndUpdateConfigBool(name string, value bool) {
+	if viper.IsSet(name) == false {
+		viper.Set(name, value)
+	}
+}
+
 func createRestrictedConfigFile(fileName string) {
 	if _, err := os.Stat(fileName); err != nil {
 		if os.IsNotExist(err) {
