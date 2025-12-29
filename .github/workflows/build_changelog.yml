@@ -27,7 +27,7 @@ jobs:
           changelog_dir: changelog
       -
         name: Get Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v7
         with:
           name: v0.0.0-NEXT
       -
