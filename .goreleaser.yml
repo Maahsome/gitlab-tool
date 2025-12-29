@@ -8,7 +8,7 @@ before:
     - go mod download
 builds:
   - id: general
-    ldflags: &build-ldflags
+    ldflags:
       - -X github.com/maahsome/gitlab-tool/cmd.semVer=v{{ .Version }}
       - -X github.com/maahsome/gitlab-tool/cmd.buildDate={{ .CommitDate }}
       - -X github.com/maahsome/gitlab-tool/cmd.gitCommit={{ .Commit }}
@@ -40,7 +40,7 @@ brews:
 
     # GitHub/GitLab repository to push the formula to
     # Gitea is not supported yet, but the support coming
-    tap:
+    repository:
       owner: maahsome
       name: homebrew-tap
       # Optionally a token can be provided, if it differs from the token provided to GoReleaser
@@ -69,7 +69,7 @@ brews:
 
     # Folder inside the repository to put the formula.
     # Default is the root folder.
-    folder: Formula
+    directory: Formula
 
     # Caveats for the user of your binary.
     # Default is empty.
