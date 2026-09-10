@@ -58,7 +58,7 @@ var rootCmd = &cobra.Command{
 		c.StripTimestamp = viper.GetBool("strip_timestamp")
 
 		inProject = true
-		if os.Args[1] != "version" && os.Args[1] != "config" {
+		if os.Args[1] != "version" && os.Args[1] != "config" && os.Args[1] != "completion" {
 			getCurrentWorkingDirGitInfo()
 		}
 
